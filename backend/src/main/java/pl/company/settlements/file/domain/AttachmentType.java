@@ -1,10 +1,13 @@
 package pl.company.settlements.file.domain;
 
 public enum AttachmentType {
-    SOURCE_DOCUMENT,
-    PDF,
-    XML,
+    CONTRACT,
+    AMENDMENT,
+    MAIN_CONTRACTOR_INVOICE,
+    SUBCONTRACTOR_INVOICE,
     PAYMENT_CONFIRMATION,
-    STATEMENT,
-    OTHER
+    SUBCONTRACTOR_STATEMENT,
+    ACCEPTANCE_PROTOCOL,
+    NECESSITY_PROTOCOL,
+    WORK_PROGRESS_REPORT
 }

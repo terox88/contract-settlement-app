@@ -1,12 +1,19 @@
 package pl.company.settlements.contract.domain;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.task.domain.InvestmentTask;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "main_contract")
 public class MainContract extends Contract {
