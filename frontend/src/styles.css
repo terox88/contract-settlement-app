@@ -1,0 +1,60 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  background: #f5f6f8;
+  color: #1f2937;
+}
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.06);
+}
+
+.budget-card {
+  margin-top: 20px;
+}
+
+.budget-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.budget-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.expand-button {
+  margin-top: 20px;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.budget-years {
+  margin-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.budget-year-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
