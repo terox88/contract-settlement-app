@@ -38,4 +38,14 @@ public class PaymentAllocation {
 
     @Column(name = "allocated_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal allocatedAmount;
+
+    @Column(
+            name = "deducted_amount",
+            nullable = false,
+            precision = 15,
+            scale = 2
+    )
+    private BigDecimal deductedAmount = BigDecimal.ZERO;
 }
+
+

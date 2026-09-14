@@ -20,4 +20,40 @@ public class Subcontract extends Contract {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "main_contract_id", nullable = false)
     private MainContract mainContract;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(
+                    name = "percentage",
+                    column = @Column(
+                            name = "performance_security_percentage",
+                            precision = 5,
+                            scale = 2
+                    )
+            ),
+            @AttributeOverride(
+                    name = "basis",
+                    column = @Column(name = "performance_security_basis")
+            )
+    })
+    private DeductionRule performanceSecurityDeduction;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(
+                    name = "percentage",
+                    column = @Column(
+                            name = "other_deduction_percentage",
+                            precision = 5,
+                            scale = 2
+                    )
+            ),
+            @AttributeOverride(
+                    name = "basis",
+                    column = @Column(name = "other_deduction_basis")
+            )
+    })
+    private DeductionRule otherDeduction;
 }
+
+

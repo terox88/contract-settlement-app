@@ -43,11 +43,22 @@ public class SubcontractorInvoice extends Invoice {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public BigDecimal getRemainingAmount() {
-        return grossAmount.subtract(getPaidAmount());
-    }
 
     public boolean isPaid() {
         return getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0;
     }
+
+
+    public BigDecimal getDeductedAmount() {
+        return paymentAllocations.stream()
+                .map(PaymentAllocation::getDeductedAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal getRemainingAmount() {
+        return grossAmount
+                .subtract(getPaidAmount())
+                .subtract(getDeductedAmount());
+    }
 }
+
