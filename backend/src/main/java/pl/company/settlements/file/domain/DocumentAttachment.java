@@ -9,6 +9,7 @@ import pl.company.settlements.contract.domain.Contract;
 import pl.company.settlements.contract.domain.ContractAmendment;
 import pl.company.settlements.invoice.domain.MainContractorInvoice;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
+import pl.company.settlements.invoice.domain.SubcontractorStatement;
 import pl.company.settlements.payment.domain.Payment;
 
 @Getter
@@ -52,4 +53,8 @@ public class DocumentAttachment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id")
     private Payment payment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subcontractor_statement_id")
+    private SubcontractorStatement subcontractorStatement;
 }

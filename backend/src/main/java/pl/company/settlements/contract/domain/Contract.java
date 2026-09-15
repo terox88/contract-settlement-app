@@ -21,6 +21,9 @@ public abstract class Contract {
     @Column(name = "contract_number", nullable = false)
     protected String contractNumber;
 
+    @Column(name = "short_description", length = 500)
+    protected String shortDescription;
+
     @Column(name = "contract_date", nullable = false)
     protected LocalDate contractDate;
 

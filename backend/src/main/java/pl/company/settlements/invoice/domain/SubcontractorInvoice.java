@@ -44,7 +44,7 @@ public class SubcontractorInvoice extends Invoice {
     }
 
 
-    public boolean isPaid() {
+    public boolean isSettled() {
         return getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0;
     }
 
@@ -59,6 +59,24 @@ public class SubcontractorInvoice extends Invoice {
         return grossAmount
                 .subtract(getPaidAmount())
                 .subtract(getDeductedAmount());
+    }
+
+    @OneToMany(
+            mappedBy = "subcontractorInvoice",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<MainInvoiceSettlement> mainInvoiceSettlements = new ArrayList<>();
+
+    @OneToOne(
+            mappedBy = "subcontractorInvoice",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private SubcontractorStatement statement;
+
+    public boolean hasStatement() {
+        return statement != null;
     }
 }
 

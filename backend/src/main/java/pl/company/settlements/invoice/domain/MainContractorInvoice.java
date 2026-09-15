@@ -28,5 +28,12 @@ public class MainContractorInvoice extends Invoice {
     )
     private List<DocumentAttachment> attachments = new ArrayList<>();
 
+    @OneToMany(
+            mappedBy = "mainContractorInvoice",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<MainInvoiceSettlement> settlements = new ArrayList<>();
+
 
 }
