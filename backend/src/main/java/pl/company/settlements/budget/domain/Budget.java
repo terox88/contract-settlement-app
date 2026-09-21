@@ -1,12 +1,13 @@
 package pl.company.settlements.budget.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import pl.company.settlements.task.domain.InvestmentTask;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-
+@Getter
 @Entity
 @Table(name = "budget")
 public class Budget {
@@ -45,19 +46,27 @@ public class Budget {
     }
 
     public void addYear(int year, BigDecimal amount) {
-        BudgetYear budgetYear = new BudgetYear(this, year, amount);
-        years.add(budgetYear);
+        boolean yearAlreadyExists = years.stream()
+                .anyMatch(budgetYear -> budgetYear.getYear() == year);
+
+        if (yearAlreadyExists) {
+            throw new IllegalArgumentException(
+                    "Budget for year " + year + " already exists"
+            );
+        }
+
+        years.add(new BudgetYear(this, year, amount));
     }
 
-    public Long getId() {
-        return id;
-    }
 
-    public InvestmentTask getInvestmentTask() {
-        return investmentTask;
-    }
+    public void changeAmountForYear(int year, BigDecimal amount) {
+        BudgetYear budgetYear = years.stream()
+                .filter(item -> item.getYear() == year)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Financial limit for year " + year + " does not exist"
+                ));
 
-    public List<BudgetYear> getYears() {
-        return years;
+        budgetYear.changeAmount(amount);
     }
 }

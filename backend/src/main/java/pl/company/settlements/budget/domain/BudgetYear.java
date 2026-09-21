@@ -52,4 +52,8 @@ public class BudgetYear {
     public BigDecimal getAmount() {
         return amount;
     }
+
+    public void changeAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
 }

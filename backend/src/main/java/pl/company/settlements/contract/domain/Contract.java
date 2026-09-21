@@ -1,6 +1,9 @@
 package pl.company.settlements.contract.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -8,7 +11,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.math.RoundingMode;
-
+@Getter
+@Setter
 @Entity
 @Table(name = "contract")
 @Inheritance(strategy = InheritanceType.JOINED)

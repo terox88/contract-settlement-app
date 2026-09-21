@@ -41,4 +41,9 @@ public class Contractor {
     private String country = "Polska";
 
     private String email;
+
+    public Contractor(String name, String taxId) {
+        this.name = name;
+        this.taxId = taxId;
+    }
 }

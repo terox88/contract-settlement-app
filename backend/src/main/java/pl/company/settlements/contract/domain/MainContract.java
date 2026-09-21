@@ -28,4 +28,19 @@ public class MainContract extends Contract {
 
     @OneToMany(mappedBy = "mainContract", cascade = CascadeType.ALL)
     private List<Subcontract> subcontracts = new ArrayList<>();
+
+    @OneToOne(
+            mappedBy = "mainContract",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private FinancialLimit financialLimit;
+
+    public FinancialLimit getOrCreateFinancialLimit() {
+        if (financialLimit == null) {
+            financialLimit = new FinancialLimit(this);
+        }
+
+        return financialLimit;
+    }
 }

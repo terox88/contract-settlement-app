@@ -73,10 +73,17 @@ public class SubcontractorInvoice extends Invoice {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+
     private SubcontractorStatement statement;
+
+
 
     public boolean hasStatement() {
         return statement != null;
+    }
+
+    public SubcontractorInvoice(Subcontract subcontract) {
+        this.subcontract = subcontract;
     }
 }
 
