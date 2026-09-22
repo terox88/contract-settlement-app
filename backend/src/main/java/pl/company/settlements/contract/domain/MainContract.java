@@ -36,6 +36,11 @@ public class MainContract extends Contract {
     )
     private FinancialLimit financialLimit;
 
+    public MainContract(InvestmentTask investmentTask, Contractor mainContractor) {
+        this.investmentTask = investmentTask;
+        this.mainContractor = mainContractor;
+    }
+
     public FinancialLimit getOrCreateFinancialLimit() {
         if (financialLimit == null) {
             financialLimit = new FinancialLimit(this);
