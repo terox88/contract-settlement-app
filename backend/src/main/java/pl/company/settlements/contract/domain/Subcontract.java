@@ -54,6 +54,14 @@ public class Subcontract extends Contract {
             )
     })
     private DeductionRule otherDeduction;
+
+    public Subcontract(
+            MainContract mainContract,
+            Contractor subcontractor
+    ) {
+        this.mainContract = mainContract;
+        this.subcontractor = subcontractor;
+    }
 }
 
 
