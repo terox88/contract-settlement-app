@@ -52,5 +52,13 @@ public class Payment {
     )
     private List<DocumentAttachment> attachments = new ArrayList<>();
 
+    public Payment(
+            LocalDate paymentDate,
+            BigDecimal amount
+    ) {
+        this.paymentDate = paymentDate;
+        this.amount = amount;
+    }
+
 }
 

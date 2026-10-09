@@ -46,6 +46,14 @@ public class PaymentAllocation {
             scale = 2
     )
     private BigDecimal deductedAmount = BigDecimal.ZERO;
+
+    public PaymentAllocation(
+            Payment payment,
+            SubcontractorInvoice subcontractorInvoice
+    ) {
+        this.payment = payment;
+        this.subcontractorInvoice = subcontractorInvoice;
+    }
 }
 
 
