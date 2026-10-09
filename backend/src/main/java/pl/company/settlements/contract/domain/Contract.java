@@ -83,11 +83,7 @@ public abstract class Contract {
     }
 
     public LocalDate getCurrentStartDate() {
-        return amendments.stream()
-                .filter(a -> a.getNewStartDate() != null)
-                .max(Comparator.comparing(ContractAmendment::getEffectiveDate))
-                .map(ContractAmendment::getNewStartDate)
-                .orElse(initialStartDate);
+        return initialStartDate;
     }
 
     public LocalDate getCurrentEndDate() {
