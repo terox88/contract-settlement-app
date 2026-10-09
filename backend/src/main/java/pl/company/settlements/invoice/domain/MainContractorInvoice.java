@@ -35,5 +35,11 @@ public class MainContractorInvoice extends Invoice {
     )
     private List<MainInvoiceSettlement> settlements = new ArrayList<>();
 
+    public MainContractorInvoice(
+            MainContract mainContract
+    ) {
+        this.mainContract = mainContract;
+    }
+
 
 }

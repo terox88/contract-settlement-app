@@ -15,13 +15,30 @@ public interface MainContractorInvoiceRepository
         extends JpaRepository<MainContractorInvoice, Long>,
         JpaSpecificationExecutor<MainContractorInvoice> {
 
+    boolean existsByMainContract_IdAndInvoiceNumber(
+            Long mainContractId,
+            String invoiceNumber
+    );
+
+    boolean existsByMainContract_IdAndInvoiceNumberAndIdNot(
+            Long mainContractId,
+            String invoiceNumber,
+            Long id
+    );
+
+    List<MainContractorInvoice>
+    findAllByMainContract_IdOrderByIssueDateDescIdDesc(
+            Long mainContractId
+    );
+
     @Query("""
             SELECT COALESCE(SUM(i.grossAmount), 0)
             FROM MainContractorInvoice i
             WHERE i.mainContract.id = :mainContractId
             """)
     BigDecimal sumGrossAmountByMainContractId(
-            @Param("mainContractId") Long mainContractId
+            @Param("mainContractId")
+            Long mainContractId
     );
 
     @Query("""
@@ -31,7 +48,8 @@ public interface MainContractorInvoiceRepository
             WHERE i.mainContract.id IN :mainContractIds
             GROUP BY i.mainContract.id
             """)
-    List<MainContractInvoicedAmount> sumGrossAmountsByMainContractIds(
+    List<MainContractInvoicedAmount>
+    sumGrossAmountsByMainContractIds(
             @Param("mainContractIds")
             Collection<Long> mainContractIds
     );
