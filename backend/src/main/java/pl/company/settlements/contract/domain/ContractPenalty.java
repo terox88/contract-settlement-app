@@ -32,4 +32,8 @@ public class ContractPenalty {
 
     @Column(length = 1000)
     private String description;
+
+    public ContractPenalty(Contract contract) {
+        this.contract = contract;
+    }
 }

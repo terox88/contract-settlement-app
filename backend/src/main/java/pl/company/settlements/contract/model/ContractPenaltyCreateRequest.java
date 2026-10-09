@@ -1,0 +1,28 @@
+package pl.company.settlements.contract.model;
+
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Getter
+@Setter
+public class ContractPenaltyCreateRequest {
+
+    @NotNull
+    private Long contractId;
+
+    @NotNull
+    private LocalDate imposedDate;
+
+    @NotNull
+    @Positive
+    private BigDecimal amount;
+
+    @Size(max = 1000)
+    private String description;
+}
