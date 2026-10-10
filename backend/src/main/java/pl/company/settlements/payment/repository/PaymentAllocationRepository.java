@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import pl.company.settlements.payment.domain.PaymentAllocation;
 import pl.company.settlements.payment.model.PaymentAllocatedAmount;
 import pl.company.settlements.payment.model.SubcontractPaymentAmounts;
+import pl.company.settlements.payment.model.SubcontractorInvoicePaymentAmounts;
 
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -122,5 +123,19 @@ public interface PaymentAllocationRepository
     List<SubcontractPaymentAmounts> sumAmountsBySubcontractIds(
             @Param("subcontractIds")
             Collection<Long> subcontractIds
+    );
+
+    @Query("""
+        SELECT a.subcontractorInvoice.id AS subcontractorInvoiceId,
+               SUM(a.allocatedAmount) AS paidAmount,
+               SUM(a.deductedAmount) AS deductedAmount
+        FROM PaymentAllocation a
+        WHERE a.subcontractorInvoice.id IN :invoiceIds
+        GROUP BY a.subcontractorInvoice.id
+        """)
+    List<SubcontractorInvoicePaymentAmounts>
+    sumAmountsBySubcontractorInvoiceIds(
+            @Param("invoiceIds")
+            Collection<Long> invoiceIds
     );
 }

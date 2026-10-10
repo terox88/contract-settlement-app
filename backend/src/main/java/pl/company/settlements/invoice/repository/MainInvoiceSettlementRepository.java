@@ -4,8 +4,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pl.company.settlements.invoice.domain.MainInvoiceSettlement;
+import pl.company.settlements.invoice.model.SubcontractorInvoiceSettlementAmounts;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 public interface MainInvoiceSettlementRepository
@@ -70,5 +72,18 @@ public interface MainInvoiceSettlementRepository
             Long mainContractorInvoiceId,
             @Param("excludedId")
             Long excludedId
+    );
+
+    @Query("""
+        SELECT s.subcontractorInvoice.id AS subcontractorInvoiceId,
+               SUM(s.settledAmount) AS assignedAmount
+        FROM MainInvoiceSettlement s
+        WHERE s.subcontractorInvoice.id IN :invoiceIds
+        GROUP BY s.subcontractorInvoice.id
+        """)
+    List<SubcontractorInvoiceSettlementAmounts>
+    sumAmountsBySubcontractorInvoiceIds(
+            @Param("invoiceIds")
+            Collection<Long> invoiceIds
     );
 }

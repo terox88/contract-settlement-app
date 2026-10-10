@@ -20,4 +20,5 @@ public class MainInvoiceSettlementCreateRequest {
     @NotNull
     @Positive
     private BigDecimal settledAmount;
+
 }
