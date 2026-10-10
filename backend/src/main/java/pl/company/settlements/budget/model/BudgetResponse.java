@@ -11,7 +11,14 @@ import java.util.List;
 public class BudgetResponse {
 
     private Long id;
+
     private Long investmentTaskId;
-    private List<BudgetYearResponse> years;
+
     private BigDecimal totalAmount;
+
+    private int currentYear;
+
+    private BigDecimal currentYearAmount;
+
+    private List<BudgetYearResponse> years;
 }

@@ -10,6 +10,8 @@ import pl.company.settlements.budget.repository.BudgetRepository;
 import pl.company.settlements.task.domain.InvestmentTask;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
 
+import java.time.Year;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -108,10 +110,27 @@ public class BudgetService {
 
     private BudgetResponse toResponse(Budget budget) {
 
+        int currentYear =
+                Year.now().getValue();
+
         return BudgetResponse.builder()
-                .id(budget.getId())
+                .id(
+                        budget.getId()
+                )
                 .investmentTaskId(
-                        budget.getInvestmentTask().getId()
+                        budget.getInvestmentTask()
+                                .getId()
+                )
+                .totalAmount(
+                        budget.getTotalAmount()
+                )
+                .currentYear(
+                        currentYear
+                )
+                .currentYearAmount(
+                        budget.getAmountForYear(
+                                currentYear
+                        )
                 )
                 .years(
                         budget.getYears()
@@ -119,7 +138,6 @@ public class BudgetService {
                                 .map(this::toYearResponse)
                                 .toList()
                 )
-                .totalAmount(budget.getTotalAmount())
                 .build();
     }
 

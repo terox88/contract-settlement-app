@@ -238,6 +238,15 @@ public class ContractAmendmentService {
             );
         }
 
+        if (newEndDate != null
+                && contract.getInitialStartDate() != null
+                && newEndDate.isBefore(contract.getInitialStartDate())) {
+
+            throw new IllegalArgumentException(
+                    "New end date cannot be before contract start date"
+            );
+        }
+
     }
 
     private void validateValueHistory(
