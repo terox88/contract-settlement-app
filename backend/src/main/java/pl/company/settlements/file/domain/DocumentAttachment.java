@@ -57,4 +57,12 @@ public class DocumentAttachment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subcontractor_statement_id")
     private SubcontractorStatement subcontractorStatement;
+
+    public DocumentAttachment(
+            StoredFile storedFile,
+            AttachmentType type
+    ) {
+        this.storedFile = storedFile;
+        this.type = type;
+    }
 }
