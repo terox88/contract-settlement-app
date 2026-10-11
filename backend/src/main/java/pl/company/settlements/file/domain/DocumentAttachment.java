@@ -25,7 +25,7 @@ public class DocumentAttachment {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "stored_file_id", nullable = false)
-    private StoredFile file;
+    private StoredFile storedFile;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "attachment_type", nullable = false)

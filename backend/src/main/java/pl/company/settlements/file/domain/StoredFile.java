@@ -29,4 +29,18 @@ public class StoredFile {
 
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
+
+    public StoredFile(
+            String originalFilename,
+            String storageKey,
+            String contentType,
+            Long size,
+            LocalDateTime uploadedAt
+    ) {
+        this.originalFilename = originalFilename;
+        this.storageKey = storageKey;
+        this.contentType = contentType;
+        this.size = size;
+        this.uploadedAt = uploadedAt;
+    }
 }
