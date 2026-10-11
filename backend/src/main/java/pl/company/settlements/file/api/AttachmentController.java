@@ -37,13 +37,16 @@ public class AttachmentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam AttachmentType type,
             @RequestParam(required = false)
-            String description
+            String description,
+            @RequestParam(required = false)
+            String pages
     ) {
         return service.uploadToContract(
                 contractId,
                 file,
                 type,
-                description
+                description,
+                pages
         );
     }
 
@@ -70,13 +73,16 @@ public class AttachmentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam AttachmentType type,
             @RequestParam(required = false)
-            String description
+            String description,
+            @RequestParam(required = false)
+            String pages
     ) {
         return service.uploadToContractAmendment(
                 amendmentId,
                 file,
                 type,
-                description
+                description,
+                pages
         );
     }
 
@@ -103,13 +109,16 @@ public class AttachmentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam AttachmentType type,
             @RequestParam(required = false)
-            String description
+            String description,
+            @RequestParam(required = false)
+            String pages
     ) {
         return service.uploadToMainContractorInvoice(
                 invoiceId,
                 file,
                 type,
-                description
+                description,
+                pages
         );
     }
 
@@ -136,13 +145,16 @@ public class AttachmentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam AttachmentType type,
             @RequestParam(required = false)
-            String description
+            String description,
+            @RequestParam(required = false)
+            String pages
     ) {
         return service.uploadToSubcontractorInvoice(
                 invoiceId,
                 file,
                 type,
-                description
+                description,
+                pages
         );
     }
 
@@ -169,13 +181,16 @@ public class AttachmentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam AttachmentType type,
             @RequestParam(required = false)
-            String description
+            String description,
+            @RequestParam(required = false)
+            String pages
     ) {
         return service.uploadToPayment(
                 paymentId,
                 file,
                 type,
-                description
+                description,
+                pages
         );
     }
 
@@ -202,13 +217,16 @@ public class AttachmentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam AttachmentType type,
             @RequestParam(required = false)
-            String description
+            String description,
+            @RequestParam(required = false)
+            String pages
     ) {
         return service.uploadToSubcontractorStatement(
                 statementId,
                 file,
                 type,
-                description
+                description,
+                pages
         );
     }
 

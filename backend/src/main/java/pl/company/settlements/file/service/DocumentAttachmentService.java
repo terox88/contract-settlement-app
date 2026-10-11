@@ -51,6 +51,7 @@ public class DocumentAttachmentService {
 
     private final SubcontractorStatementRepository
             subcontractorStatementRepository;
+    private final PdfPageSelectionService pdfPageSelectionService;
 
     public AttachmentResponse getById(
             Long id
@@ -225,7 +226,8 @@ public class DocumentAttachmentService {
             Long contractId,
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
         Contract contract =
@@ -243,7 +245,8 @@ public class DocumentAttachmentService {
                 createAttachment(
                         file,
                         type,
-                        description
+                        description,
+                        pages
                 );
 
         attachment.setContract(
@@ -260,7 +263,8 @@ public class DocumentAttachmentService {
             Long amendmentId,
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
         ContractAmendment amendment =
@@ -278,7 +282,8 @@ public class DocumentAttachmentService {
                 createAttachment(
                         file,
                         type,
-                        description
+                        description,
+                        pages
                 );
 
         attachment.setContractAmendment(
@@ -295,7 +300,8 @@ public class DocumentAttachmentService {
             Long invoiceId,
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
         MainContractorInvoice invoice =
@@ -313,7 +319,8 @@ public class DocumentAttachmentService {
                 createAttachment(
                         file,
                         type,
-                        description
+                        description,
+                        pages
                 );
 
         attachment.setMainContractorInvoice(
@@ -330,7 +337,8 @@ public class DocumentAttachmentService {
             Long invoiceId,
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
         SubcontractorInvoice invoice =
@@ -348,7 +356,8 @@ public class DocumentAttachmentService {
                 createAttachment(
                         file,
                         type,
-                        description
+                        description,
+                        pages
                 );
 
         attachment.setSubcontractorInvoice(
@@ -365,7 +374,8 @@ public class DocumentAttachmentService {
             Long paymentId,
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
         Payment payment =
@@ -383,7 +393,8 @@ public class DocumentAttachmentService {
                 createAttachment(
                         file,
                         type,
-                        description
+                        description,
+                        pages
                 );
 
         attachment.setPayment(
@@ -400,7 +411,8 @@ public class DocumentAttachmentService {
             Long statementId,
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
         SubcontractorStatement statement =
@@ -418,7 +430,8 @@ public class DocumentAttachmentService {
                 createAttachment(
                         file,
                         type,
-                        description
+                        description,
+                        pages
                 );
 
         attachment.setSubcontractorStatement(
@@ -481,12 +494,11 @@ public class DocumentAttachmentService {
     private DocumentAttachment createAttachment(
             MultipartFile file,
             AttachmentType type,
-            String description
+            String description,
+            String pages
     ) {
 
-        validateFile(
-                file
-        );
+        validateFile(file);
 
         if (type == null) {
             throw new IllegalArgumentException(
@@ -509,22 +521,58 @@ public class DocumentAttachmentService {
 
         StoredFile storedFile;
 
-        try (InputStream inputStream =
-                     file.getInputStream()) {
+        if (pages != null
+                && !pages.isBlank()) {
 
-            storedFile =
-                    fileStorageService.save(
-                            inputStream,
-                            file.getOriginalFilename(),
-                            file.getContentType()
+            byte[] selectedPdf =
+                    pdfPageSelectionService.selectPages(
+                            file,
+                            pages
                     );
 
-        } catch (IOException exception) {
+            try (
+                    InputStream inputStream =
+                            new java.io.ByteArrayInputStream(
+                                    selectedPdf
+                            )
+            ) {
 
-            throw new IllegalStateException(
-                    "Could not read uploaded file",
-                    exception
-            );
+                storedFile =
+                        fileStorageService.save(
+                                inputStream,
+                                file.getOriginalFilename(),
+                                "application/pdf"
+                        );
+
+            } catch (IOException exception) {
+
+                throw new IllegalStateException(
+                        "Could not store processed PDF file",
+                        exception
+                );
+            }
+
+        } else {
+
+            try (
+                    InputStream inputStream =
+                            file.getInputStream()
+            ) {
+
+                storedFile =
+                        fileStorageService.save(
+                                inputStream,
+                                file.getOriginalFilename(),
+                                file.getContentType()
+                        );
+
+            } catch (IOException exception) {
+
+                throw new IllegalStateException(
+                        "Could not read uploaded file",
+                        exception
+                );
+            }
         }
 
         DocumentAttachment attachment =
