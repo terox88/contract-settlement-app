@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import pl.company.settlements.file.domain.StoredFile;
 import pl.company.settlements.file.repository.StoredFileRepository;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -121,12 +123,15 @@ public class LocalFileStorageService
                         LocalDateTime.now()
                 );
 
+        StoredFile savedFile;
+
         try {
 
-            return storedFileRepository
-                    .saveAndFlush(
-                            storedFile
-                    );
+            savedFile =
+                    storedFileRepository
+                            .saveAndFlush(
+                                    storedFile
+                            );
 
         } catch (RuntimeException exception) {
 
@@ -136,6 +141,12 @@ public class LocalFileStorageService
 
             throw exception;
         }
+
+        registerRollbackCleanup(
+                targetPath
+        );
+
+        return savedFile;
     }
 
     @Override
@@ -302,6 +313,36 @@ public class LocalFileStorageService
         }
 
         return resolved;
+    }
+
+    private void registerRollbackCleanup(
+            Path targetPath
+    ) {
+
+        if (!TransactionSynchronizationManager
+                .isSynchronizationActive()) {
+            return;
+        }
+
+        TransactionSynchronizationManager
+                .registerSynchronization(
+                        new TransactionSynchronization() {
+
+                            @Override
+                            public void afterCompletion(
+                                    int status
+                            ) {
+
+                                if (status
+                                        == STATUS_ROLLED_BACK) {
+
+                                    deletePhysicalFileQuietly(
+                                            targetPath
+                                    );
+                                }
+                            }
+                        }
+                );
     }
 
     private void deletePhysicalFileQuietly(

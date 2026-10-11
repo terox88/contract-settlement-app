@@ -18,6 +18,8 @@ import pl.company.settlements.file.domain.AttachmentType;
 import pl.company.settlements.file.model.AttachmentDownload;
 import pl.company.settlements.file.model.AttachmentResponse;
 import pl.company.settlements.file.service.DocumentAttachmentService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -319,5 +321,149 @@ public class AttachmentController {
         } catch (IllegalArgumentException exception) {
             return MediaType.APPLICATION_OCTET_STREAM;
         }
+    }
+
+    @PostMapping(
+            value = "/api/subcontractor-invoices/{invoiceId}/attachments/split",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<AttachmentResponse>
+    splitSubcontractorInvoiceAttachment(
+            @PathVariable Long invoiceId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam AttachmentType type,
+            @RequestParam(required = false)
+            String description,
+            @RequestParam String parts
+    ) {
+
+        return service.splitToSubcontractorInvoice(
+                invoiceId,
+                file,
+                type,
+                description,
+                parts
+        );
+    }
+
+    @PostMapping(
+            value = "/api/main-contractor-invoices/{invoiceId}/attachments/split",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<AttachmentResponse>
+    splitMainContractorInvoiceAttachment(
+            @PathVariable Long invoiceId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam AttachmentType type,
+            @RequestParam(required = false)
+            String description,
+            @RequestParam String parts
+    ) {
+
+        return service.splitToMainContractorInvoice(
+                invoiceId,
+                file,
+                type,
+                description,
+                parts
+        );
+    }
+
+    @PostMapping(
+            value = "/api/contracts/{contractId}/attachments/split",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<AttachmentResponse>
+    splitContractAttachment(
+            @PathVariable Long contractId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam AttachmentType type,
+            @RequestParam(required = false)
+            String description,
+            @RequestParam String parts
+    ) {
+
+        return service.splitToContract(
+                contractId,
+                file,
+                type,
+                description,
+                parts
+        );
+    }
+
+    @PostMapping(
+            value = "/api/contract-amendments/{amendmentId}/attachments/split",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<AttachmentResponse>
+    splitContractAmendmentAttachment(
+            @PathVariable Long amendmentId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam AttachmentType type,
+            @RequestParam(required = false)
+            String description,
+            @RequestParam String parts
+    ) {
+
+        return service.splitToContractAmendment(
+                amendmentId,
+                file,
+                type,
+                description,
+                parts
+        );
+    }
+
+    @PostMapping(
+            value = "/api/payments/{paymentId}/attachments/split",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<AttachmentResponse>
+    splitPaymentAttachment(
+            @PathVariable Long paymentId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam AttachmentType type,
+            @RequestParam(required = false)
+            String description,
+            @RequestParam String parts
+    ) {
+
+        return service.splitToPayment(
+                paymentId,
+                file,
+                type,
+                description,
+                parts
+        );
+    }
+
+    @PostMapping(
+            value = "/api/subcontractor-statements/{statementId}/attachments/split",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<AttachmentResponse>
+    splitStatementAttachment(
+            @PathVariable Long statementId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam AttachmentType type,
+            @RequestParam(required = false)
+            String description,
+            @RequestParam String parts
+    ) {
+
+        return service.splitToSubcontractorStatement(
+                statementId,
+                file,
+                type,
+                description,
+                parts
+        );
     }
 }

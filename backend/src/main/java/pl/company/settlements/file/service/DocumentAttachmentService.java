@@ -26,6 +26,9 @@ import pl.company.settlements.payment.repository.PaymentRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +55,8 @@ public class DocumentAttachmentService {
     private final SubcontractorStatementRepository
             subcontractorStatementRepository;
     private final PdfPageSelectionService pdfPageSelectionService;
+
+    private final PdfSplitService pdfSplitService;
 
     public AttachmentResponse getById(
             Long id
@@ -489,6 +494,284 @@ public class DocumentAttachmentService {
         fileStorageService.delete(
                 storageKey
         );
+    }
+
+    @Transactional
+    public List<AttachmentResponse> splitToContract(
+            Long contractId,
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts
+    ) {
+
+        Contract contract =
+                contractRepository
+                        .findById(contractId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Contract with id "
+                                                + contractId
+                                                + " does not exist"
+                                )
+                        );
+
+        return createSplitAttachments(
+                file,
+                type,
+                description,
+                parts,
+                attachment ->
+                        attachment.setContract(
+                                contract
+                        )
+        );
+    }
+
+    @Transactional
+    public List<AttachmentResponse>
+    splitToContractAmendment(
+            Long amendmentId,
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts
+    ) {
+
+        ContractAmendment amendment =
+                contractAmendmentRepository
+                        .findById(amendmentId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Contract amendment with id "
+                                                + amendmentId
+                                                + " does not exist"
+                                )
+                        );
+
+        return createSplitAttachments(
+                file,
+                type,
+                description,
+                parts,
+                attachment ->
+                        attachment.setContractAmendment(
+                                amendment
+                        )
+        );
+    }
+
+    @Transactional
+    public List<AttachmentResponse>
+    splitToMainContractorInvoice(
+            Long invoiceId,
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts
+    ) {
+
+        MainContractorInvoice invoice =
+                mainContractorInvoiceRepository
+                        .findById(invoiceId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Main contractor invoice with id "
+                                                + invoiceId
+                                                + " does not exist"
+                                )
+                        );
+
+        return createSplitAttachments(
+                file,
+                type,
+                description,
+                parts,
+                attachment ->
+                        attachment.setMainContractorInvoice(
+                                invoice
+                        )
+        );
+    }
+
+    @Transactional
+    public List<AttachmentResponse>
+    splitToSubcontractorInvoice(
+            Long invoiceId,
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts
+    ) {
+
+        SubcontractorInvoice invoice =
+                subcontractorInvoiceRepository
+                        .findById(invoiceId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Subcontractor invoice with id "
+                                                + invoiceId
+                                                + " does not exist"
+                                )
+                        );
+
+        return createSplitAttachments(
+                file,
+                type,
+                description,
+                parts,
+                attachment ->
+                        attachment.setSubcontractorInvoice(
+                                invoice
+                        )
+        );
+    }
+
+    @Transactional
+    public List<AttachmentResponse> splitToPayment(
+            Long paymentId,
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts
+    ) {
+
+        Payment payment =
+                paymentRepository
+                        .findById(paymentId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Payment with id "
+                                                + paymentId
+                                                + " does not exist"
+                                )
+                        );
+
+        return createSplitAttachments(
+                file,
+                type,
+                description,
+                parts,
+                attachment ->
+                        attachment.setPayment(
+                                payment
+                        )
+        );
+    }
+
+    @Transactional
+    public List<AttachmentResponse>
+    splitToSubcontractorStatement(
+            Long statementId,
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts
+    ) {
+
+        SubcontractorStatement statement =
+                subcontractorStatementRepository
+                        .findById(statementId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Subcontractor statement with id "
+                                                + statementId
+                                                + " does not exist"
+                                )
+                        );
+
+        return createSplitAttachments(
+                file,
+                type,
+                description,
+                parts,
+                attachment ->
+                        attachment.setSubcontractorStatement(
+                                statement
+                        )
+        );
+    }
+
+
+    private List<AttachmentResponse> createSplitAttachments(
+            MultipartFile file,
+            AttachmentType type,
+            String description,
+            String parts,
+            Consumer<DocumentAttachment> ownerSetter
+    ) {
+
+        validateFile(
+                file
+        );
+
+        if (type == null) {
+            throw new IllegalArgumentException(
+                    "Attachment type cannot be null"
+            );
+        }
+
+        String normalizedDescription =
+                trimToNull(
+                        description
+                );
+
+        if (normalizedDescription != null
+                && normalizedDescription.length() > 1000) {
+
+            throw new IllegalArgumentException(
+                    "Attachment description cannot exceed 1000 characters"
+            );
+        }
+
+        List<PdfSplitService.SplitPdfPart>
+                splitParts =
+                pdfSplitService.split(
+                        file,
+                        parts
+                );
+
+        List<DocumentAttachment> attachments =
+                new ArrayList<>();
+
+        for (PdfSplitService.SplitPdfPart part
+                : splitParts) {
+
+            StoredFile storedFile =
+                    fileStorageService.save(
+                            new ByteArrayInputStream(
+                                    part.content()
+                            ),
+                            part.filename(),
+                            "application/pdf"
+                    );
+
+            DocumentAttachment attachment =
+                    new DocumentAttachment(
+                            storedFile,
+                            type
+                    );
+
+            attachment.setDescription(
+                    normalizedDescription
+            );
+
+            ownerSetter.accept(
+                    attachment
+            );
+
+            attachments.add(
+                    attachment
+            );
+        }
+
+        return repository
+                .saveAllAndFlush(
+                        attachments
+                )
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private DocumentAttachment createAttachment(
