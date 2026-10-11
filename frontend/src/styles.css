@@ -58,3 +58,78 @@ body {
   padding: 12px 0;
   border-bottom: 1px solid #e5e7eb;
 }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin-bottom: 8px;
+}
+
+.task-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.task-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+}
+
+.task-card h2 {
+  margin: 8px 0;
+}
+
+.task-card p {
+  margin-bottom: 0;
+}
+
+.task-number {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.task-details {
+  margin-top: 20px;
+}
+
+.task-details h1 {
+  margin: 8px 0;
+}
+
+.section-title {
+  margin-top: 32px;
+  margin-bottom: 12px;
+}
+
+.back-link {
+  display: inline-block;
+  text-decoration: none;
+  color: #374151;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.error-message {
+  padding: 16px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #991b1b;
+}
