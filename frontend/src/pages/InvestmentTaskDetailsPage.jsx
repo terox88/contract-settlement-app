@@ -303,7 +303,11 @@ function MainContractCard({
         );
 
     return (
-        <section className="card main-contract-card">
+        <Link
+            to={`/main-contracts/${contract.id}`}
+            className="main-contract-link"
+        >
+            <section className="card main-contract-card">
 
             <div className="contract-card-header">
 
@@ -421,7 +425,8 @@ function MainContractCard({
                 </div>
             )}
 
-        </section>
+            </section>
+        </Link>
     );
 }
 

@@ -10,6 +10,9 @@ import InvestmentTaskListPage
 import InvestmentTaskDetailsPage
     from './pages/InvestmentTaskDetailsPage';
 
+import MainContractDetailsPage
+    from './pages/MainContractDetailsPage';
+
 export default function App() {
     return (
         <Routes>
@@ -35,6 +38,13 @@ export default function App() {
                 path="/tasks/:taskId"
                 element={
                     <InvestmentTaskDetailsPage />
+                }
+            />
+
+            <Route
+                path="/main-contracts/:contractId"
+                element={
+                    <MainContractDetailsPage />
                 }
             />
 
