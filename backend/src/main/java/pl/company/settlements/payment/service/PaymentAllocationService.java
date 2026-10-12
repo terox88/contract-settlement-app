@@ -16,6 +16,10 @@ import pl.company.settlements.payment.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.util.List;
 
+import pl.company.settlements.invoice.domain.Invoice;
+import pl.company.settlements.invoice.domain.MainContractorInvoice;
+import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,6 +31,9 @@ public class PaymentAllocationService {
 
     private final SubcontractorInvoiceRepository
             subcontractorInvoiceRepository;
+
+    private final MainContractorInvoiceRepository
+            mainContractorInvoiceRepository;
 
     public PaymentAllocationResponse getById(
             Long id
@@ -88,10 +95,41 @@ public class PaymentAllocationService {
                 .toList();
     }
 
+    public List<PaymentAllocationResponse>
+    findAllByMainContractorInvoiceId(
+            Long mainContractorInvoiceId
+    ) {
+
+        if (!mainContractorInvoiceRepository
+                .existsById(
+                        mainContractorInvoiceId
+                )) {
+
+            throw new IllegalArgumentException(
+                    "Main contractor invoice with id "
+                            + mainContractorInvoiceId
+                            + " does not exist"
+            );
+        }
+
+        return repository
+                .findAllByMainContractorInvoice_IdOrderByIdAsc(
+                        mainContractorInvoiceId
+                )
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public PaymentAllocationResponse create(
             PaymentAllocationCreateRequest request
     ) {
+
+        validateInvoiceTarget(
+                request.getSubcontractorInvoiceId(),
+                request.getMainContractorInvoiceId()
+        );
 
         Payment payment =
                 paymentRepository
@@ -106,30 +144,6 @@ public class PaymentAllocationService {
                                 )
                         );
 
-        SubcontractorInvoice invoice =
-                subcontractorInvoiceRepository
-                        .findById(
-                                request.getSubcontractorInvoiceId()
-                        )
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Subcontractor invoice with id "
-                                                + request
-                                                .getSubcontractorInvoiceId()
-                                                + " does not exist"
-                                )
-                        );
-
-        validateCurrencies(
-                payment,
-                invoice
-        );
-
-        validatePairUnique(
-                payment.getId(),
-                invoice.getId()
-        );
-
         validateAmounts(
                 request.getAllocatedAmount(),
                 request.getDeductedAmount()
@@ -141,11 +155,81 @@ public class PaymentAllocationService {
                 null
         );
 
-        PaymentAllocation allocation =
-                new PaymentAllocation(
-                        payment,
-                        invoice
+        PaymentAllocation allocation;
+
+        if (request.getSubcontractorInvoiceId() != null) {
+
+            SubcontractorInvoice invoice =
+                    subcontractorInvoiceRepository
+                            .findById(
+                                    request.getSubcontractorInvoiceId()
+                            )
+                            .orElseThrow(() ->
+                                    new IllegalArgumentException(
+                                            "Subcontractor invoice with id "
+                                                    + request
+                                                    .getSubcontractorInvoiceId()
+                                                    + " does not exist"
+                                    )
+                            );
+
+            validateCurrencies(
+                    payment,
+                    invoice
+            );
+
+            validateSubcontractorInvoicePairUnique(
+                    payment.getId(),
+                    invoice.getId()
+            );
+
+            allocation =
+                    new PaymentAllocation(
+                            payment,
+                            invoice
+                    );
+
+        } else {
+
+            MainContractorInvoice invoice =
+                    mainContractorInvoiceRepository
+                            .findById(
+                                    request.getMainContractorInvoiceId()
+                            )
+                            .orElseThrow(() ->
+                                    new IllegalArgumentException(
+                                            "Main contractor invoice with id "
+                                                    + request
+                                                    .getMainContractorInvoiceId()
+                                                    + " does not exist"
+                                    )
+                            );
+
+            validateCurrencies(
+                    payment,
+                    invoice
+            );
+
+            validateMainInvoicePairUnique(
+                    payment.getId(),
+                    invoice.getId()
+            );
+
+            if (request.getDeductedAmount()
+                    .compareTo(BigDecimal.ZERO) != 0) {
+
+                throw new IllegalArgumentException(
+                        "Deducted amount must be zero "
+                                + "for main contractor invoice allocation"
                 );
+            }
+
+            allocation =
+                    new PaymentAllocation(
+                            payment,
+                            invoice
+                    );
+        }
 
         allocation.setAllocatedAmount(
                 request.getAllocatedAmount()
@@ -171,6 +255,16 @@ public class PaymentAllocationService {
 
         PaymentAllocation allocation =
                 findEntityById(id);
+
+        if (allocation.isMainContractorInvoiceAllocation()
+                && request.getDeductedAmount()
+                .compareTo(BigDecimal.ZERO) != 0) {
+
+            throw new IllegalArgumentException(
+                    "Deducted amount must be zero "
+                            + "for main contractor invoice allocation"
+            );
+        }
 
         validateAmounts(
                 request.getAllocatedAmount(),
@@ -237,7 +331,7 @@ public class PaymentAllocationService {
         }
     }
 
-    private void validatePairUnique(
+    private void validateSubcontractorInvoicePairUnique(
             Long paymentId,
             Long subcontractorInvoiceId
     ) {
@@ -251,6 +345,24 @@ public class PaymentAllocationService {
             throw new IllegalArgumentException(
                     "This payment is already allocated "
                             + "to this subcontractor invoice"
+            );
+        }
+    }
+
+    private void validateMainInvoicePairUnique(
+            Long paymentId,
+            Long mainContractorInvoiceId
+    ) {
+
+        if (repository
+                .existsByPayment_IdAndMainContractorInvoice_Id(
+                        paymentId,
+                        mainContractorInvoiceId
+                )) {
+
+            throw new IllegalArgumentException(
+                    "This payment is already allocated "
+                            + "to this main contractor invoice"
             );
         }
     }
@@ -277,6 +389,41 @@ public class PaymentAllocationService {
 
             throw new IllegalArgumentException(
                     "Deducted amount cannot be negative"
+            );
+        }
+    }
+
+    private void validateInvoiceTarget(
+            Long subcontractorInvoiceId,
+            Long mainContractorInvoiceId
+    ) {
+
+        boolean subcontractorSelected =
+                subcontractorInvoiceId != null;
+
+        boolean mainContractorSelected =
+                mainContractorInvoiceId != null;
+
+        if (subcontractorSelected
+                == mainContractorSelected) {
+
+            throw new IllegalArgumentException(
+                    "Payment allocation must reference exactly one invoice"
+            );
+        }
+    }
+    private void validateCurrencies(
+            Payment payment,
+            Invoice invoice
+    ) {
+
+        if (!payment.getCurrency()
+                .equalsIgnoreCase(
+                        invoice.getCurrency()
+                )) {
+
+            throw new IllegalArgumentException(
+                    "Payment and invoice must use the same currency"
             );
         }
     }
@@ -330,9 +477,6 @@ public class PaymentAllocationService {
         Payment payment =
                 allocation.getPayment();
 
-        SubcontractorInvoice invoice =
-                allocation.getSubcontractorInvoice();
-
         BigDecimal totalAllocatedFromPayment =
                 repository
                         .sumAllocatedAmountByPaymentId(
@@ -345,114 +489,284 @@ public class PaymentAllocationService {
                                 totalAllocatedFromPayment
                         );
 
-        BigDecimal invoicePaidAmount =
-                repository
-                        .sumPaidAmountBySubcontractorInvoiceId(
-                                invoice.getId()
-                        );
+        /*
+         * =========================================================
+         * FAKTURA GENERALNEGO WYKONAWCY
+         * =========================================================
+         */
+        if (allocation.isMainContractorInvoiceAllocation()) {
 
-        BigDecimal invoiceDeductedAmount =
-                repository
-                        .sumDeductedAmountBySubcontractorInvoiceId(
-                                invoice.getId()
-                        );
+            MainContractorInvoice invoice =
+                    allocation.getMainContractorInvoice();
 
-        BigDecimal invoiceRemainingAmount =
-                invoice.getGrossAmount()
-                        .subtract(
-                                invoicePaidAmount
-                        )
-                        .subtract(
-                                invoiceDeductedAmount
-                        );
+            BigDecimal invoicePaidAmount =
+                    repository
+                            .sumPaidAmountByMainContractorInvoiceId(
+                                    invoice.getId()
+                            );
 
-        boolean invoiceSettled =
-                invoiceRemainingAmount.compareTo(
-                        BigDecimal.ZERO
-                ) <= 0;
+            BigDecimal invoiceDeductedAmount =
+                    BigDecimal.ZERO;
 
-        boolean invoiceAmountExceeded =
-                invoiceRemainingAmount.compareTo(
-                        BigDecimal.ZERO
-                ) < 0;
+            BigDecimal invoiceRemainingAmount =
+                    invoice.getGrossAmount()
+                            .subtract(
+                                    invoicePaidAmount
+                            );
 
-        return PaymentAllocationResponse.builder()
-                .id(
-                        allocation.getId()
-                )
+            boolean invoiceSettled =
+                    invoiceRemainingAmount.compareTo(
+                            BigDecimal.ZERO
+                    ) <= 0;
 
-                .paymentId(
-                        payment.getId()
-                )
-                .paymentAmount(
-                        payment.getAmount()
-                )
-                .paymentCurrency(
-                        payment.getCurrency()
-                )
+            boolean invoiceAmountExceeded =
+                    invoiceRemainingAmount.compareTo(
+                            BigDecimal.ZERO
+                    ) < 0;
 
-                .allocatedAmount(
-                        allocation.getAllocatedAmount()
-                )
-                .deductedAmount(
-                        allocation.getDeductedAmount()
-                )
+            return PaymentAllocationResponse.builder()
+                    .id(
+                            allocation.getId()
+                    )
 
-                .totalAllocatedFromPayment(
-                        totalAllocatedFromPayment
-                )
-                .remainingPaymentAmount(
-                        remainingPaymentAmount
-                )
+                    .paymentId(
+                            payment.getId()
+                    )
+                    .paymentAmount(
+                            payment.getAmount()
+                    )
+                    .paymentCurrency(
+                            payment.getCurrency()
+                    )
 
-                .subcontractorInvoiceId(
-                        invoice.getId()
-                )
-                .subcontractorInvoiceNumber(
-                        invoice.getInvoiceNumber()
-                )
+                    .allocatedAmount(
+                            allocation.getAllocatedAmount()
+                    )
+                    .deductedAmount(
+                            BigDecimal.ZERO
+                    )
 
-                .subcontractId(
-                        invoice.getSubcontract()
-                                .getId()
-                )
+                    .totalAllocatedFromPayment(
+                            totalAllocatedFromPayment
+                    )
+                    .remainingPaymentAmount(
+                            remainingPaymentAmount
+                    )
 
-                .subcontractorId(
-                        invoice.getSubcontract()
-                                .getSubcontractor()
-                                .getId()
-                )
-                .subcontractorName(
-                        invoice.getSubcontract()
-                                .getSubcontractor()
-                                .getName()
-                )
+                    /*
+                     * Faktura GW
+                     */
+                    .mainContractorInvoiceId(
+                            invoice.getId()
+                    )
+                    .mainContractorInvoiceNumber(
+                            invoice.getInvoiceNumber()
+                    )
 
-                .invoiceGrossAmount(
-                        invoice.getGrossAmount()
-                )
+                    /*
+                     * Umowa główna
+                     */
+                    .mainContractId(
+                            invoice.getMainContract()
+                                    .getId()
+                    )
+                    .mainContractNumber(
+                            invoice.getMainContract()
+                                    .getContractNumber()
+                    )
 
-                .invoicePaidAmount(
-                        invoicePaidAmount
-                )
-                .invoiceDeductedAmount(
-                        invoiceDeductedAmount
-                )
-                .invoiceRemainingAmount(
-                        invoiceRemainingAmount
-                )
+                    /*
+                     * Zadanie inwestycyjne
+                     */
+                    .investmentTaskId(
+                            invoice.getMainContract()
+                                    .getInvestmentTask()
+                                    .getId()
+                    )
 
-                .invoiceSettled(
-                        invoiceSettled
-                )
-                .invoiceAmountExceeded(
-                        invoiceAmountExceeded
-                )
+                    /*
+                     * Generalny wykonawca
+                     */
+                    .mainContractorId(
+                            invoice.getMainContract()
+                                    .getMainContractor()
+                                    .getId()
+                    )
+                    .mainContractorName(
+                            invoice.getMainContract()
+                                    .getMainContractor()
+                                    .getName()
+                    )
 
-                .hasStatement(
-                        invoice.hasStatement()
-                )
+                    /*
+                     * Rozliczenie faktury
+                     */
+                    .invoiceGrossAmount(
+                            invoice.getGrossAmount()
+                    )
+                    .invoicePaidAmount(
+                            invoicePaidAmount
+                    )
+                    .invoiceDeductedAmount(
+                            invoiceDeductedAmount
+                    )
+                    .invoiceRemainingAmount(
+                            invoiceRemainingAmount
+                    )
 
-                .build();
+                    .invoiceSettled(
+                            invoiceSettled
+                    )
+                    .invoiceAmountExceeded(
+                            invoiceAmountExceeded
+                    )
+
+                    /*
+                     * Oświadczenie dotyczy tylko
+                     * faktury podwykonawcy.
+                     */
+                    .hasStatement(
+                            false
+                    )
+
+                    .build();
+        }
+
+        /*
+         * =========================================================
+         * FAKTURA PODWYKONAWCY
+         * =========================================================
+         */
+        if (allocation.isSubcontractorInvoiceAllocation()) {
+
+            SubcontractorInvoice invoice =
+                    allocation.getSubcontractorInvoice();
+
+            BigDecimal invoicePaidAmount =
+                    repository
+                            .sumPaidAmountBySubcontractorInvoiceId(
+                                    invoice.getId()
+                            );
+
+            BigDecimal invoiceDeductedAmount =
+                    repository
+                            .sumDeductedAmountBySubcontractorInvoiceId(
+                                    invoice.getId()
+                            );
+
+            BigDecimal invoiceRemainingAmount =
+                    invoice.getGrossAmount()
+                            .subtract(
+                                    invoicePaidAmount
+                            )
+                            .subtract(
+                                    invoiceDeductedAmount
+                            );
+
+            boolean invoiceSettled =
+                    invoiceRemainingAmount.compareTo(
+                            BigDecimal.ZERO
+                    ) <= 0;
+
+            boolean invoiceAmountExceeded =
+                    invoiceRemainingAmount.compareTo(
+                            BigDecimal.ZERO
+                    ) < 0;
+
+            return PaymentAllocationResponse.builder()
+                    .id(
+                            allocation.getId()
+                    )
+
+                    .paymentId(
+                            payment.getId()
+                    )
+                    .paymentAmount(
+                            payment.getAmount()
+                    )
+                    .paymentCurrency(
+                            payment.getCurrency()
+                    )
+
+                    .allocatedAmount(
+                            allocation.getAllocatedAmount()
+                    )
+                    .deductedAmount(
+                            allocation.getDeductedAmount()
+                    )
+
+                    .totalAllocatedFromPayment(
+                            totalAllocatedFromPayment
+                    )
+                    .remainingPaymentAmount(
+                            remainingPaymentAmount
+                    )
+
+                    /*
+                     * Faktura podwykonawcy
+                     */
+                    .subcontractorInvoiceId(
+                            invoice.getId()
+                    )
+                    .subcontractorInvoiceNumber(
+                            invoice.getInvoiceNumber()
+                    )
+
+                    /*
+                     * Umowa podwykonawcza
+                     */
+                    .subcontractId(
+                            invoice.getSubcontract()
+                                    .getId()
+                    )
+
+                    /*
+                     * Podwykonawca
+                     */
+                    .subcontractorId(
+                            invoice.getSubcontract()
+                                    .getSubcontractor()
+                                    .getId()
+                    )
+                    .subcontractorName(
+                            invoice.getSubcontract()
+                                    .getSubcontractor()
+                                    .getName()
+                    )
+
+                    /*
+                     * Rozliczenie faktury
+                     */
+                    .invoiceGrossAmount(
+                            invoice.getGrossAmount()
+                    )
+                    .invoicePaidAmount(
+                            invoicePaidAmount
+                    )
+                    .invoiceDeductedAmount(
+                            invoiceDeductedAmount
+                    )
+                    .invoiceRemainingAmount(
+                            invoiceRemainingAmount
+                    )
+
+                    .invoiceSettled(
+                            invoiceSettled
+                    )
+                    .invoiceAmountExceeded(
+                            invoiceAmountExceeded
+                    )
+
+                    .hasStatement(
+                            invoice.hasStatement()
+                    )
+
+                    .build();
+        }
+
+
+        throw new IllegalStateException(
+                "Payment allocation does not reference any invoice"
+        );
     }
 }

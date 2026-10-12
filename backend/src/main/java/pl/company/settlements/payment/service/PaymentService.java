@@ -243,14 +243,35 @@ public class PaymentService {
 
         boolean currencyMismatch =
                 allocations.stream()
-                        .map(PaymentAllocation::getSubcontractorInvoice)
-                        .anyMatch(invoice ->
-                                !newCurrency.equalsIgnoreCase(
-                                        invoice.getCurrency()
-                                )
-                        );
+                        .anyMatch(allocation -> {
+
+                            String invoiceCurrency;
+
+                            if (allocation
+                                    .getSubcontractorInvoice()
+                                    != null) {
+
+                                invoiceCurrency =
+                                        allocation
+                                                .getSubcontractorInvoice()
+                                                .getCurrency();
+
+                            } else {
+
+                                invoiceCurrency =
+                                        allocation
+                                                .getMainContractorInvoice()
+                                                .getCurrency();
+                            }
+
+                            return !newCurrency
+                                    .equalsIgnoreCase(
+                                            invoiceCurrency
+                                    );
+                        });
 
         if (currencyMismatch) {
+
             throw new IllegalArgumentException(
                     "Payment currency cannot be changed because "
                             + "it would differ from an allocated "

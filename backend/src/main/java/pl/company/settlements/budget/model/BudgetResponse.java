@@ -21,4 +21,12 @@ public class BudgetResponse {
     private BigDecimal currentYearAmount;
 
     private List<BudgetYearResponse> years;
+
+    private BigDecimal paidAmount;
+
+    private BigDecimal remainingAmount;
+
+    private BigDecimal currentYearPaidAmount;
+
+    private BigDecimal currentYearRemainingAmount;
 }

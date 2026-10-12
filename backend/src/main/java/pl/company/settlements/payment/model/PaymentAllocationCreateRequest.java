@@ -15,7 +15,8 @@ public class PaymentAllocationCreateRequest {
     @NotNull
     private Long paymentId;
 
-    @NotNull
+    private Long mainContractorInvoiceId;
+
     private Long subcontractorInvoiceId;
 
     @NotNull

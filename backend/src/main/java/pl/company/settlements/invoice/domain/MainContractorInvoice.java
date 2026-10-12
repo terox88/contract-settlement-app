@@ -6,6 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.file.domain.DocumentAttachment;
+import pl.company.settlements.payment.domain.PaymentAllocation;
+
+import java.math.BigDecimal;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -51,6 +54,34 @@ public class MainContractorInvoice extends Invoice {
     )
     private Set<String> vatRates =
             new LinkedHashSet<>();
+
+    @OneToMany(
+            mappedBy = "mainContractorInvoice",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<PaymentAllocation> paymentAllocations =
+            new ArrayList<>();
+
+    public BigDecimal getPaidAmount() {
+        return paymentAllocations.stream()
+                .map(PaymentAllocation::getAllocatedAmount)
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
+    }
+
+    public BigDecimal getRemainingAmount() {
+        return grossAmount.subtract(
+                getPaidAmount()
+        );
+    }
+
+    public boolean isSettled() {
+        return getRemainingAmount()
+                .compareTo(BigDecimal.ZERO) <= 0;
+    }
 
     public MainContractorInvoice(
             MainContract mainContract

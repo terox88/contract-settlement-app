@@ -9,6 +9,7 @@ import pl.company.settlements.payment.model.SubcontractPaymentAmounts;
 import pl.company.settlements.payment.model.SubcontractorInvoicePaymentAmounts;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
@@ -137,5 +138,71 @@ public interface PaymentAllocationRepository
     sumAmountsBySubcontractorInvoiceIds(
             @Param("invoiceIds")
             Collection<Long> invoiceIds
+    );
+
+    @Query("""
+        select coalesce(
+            sum(a.allocatedAmount),
+            0
+        )
+        from PaymentAllocation a
+        where a.mainContractorInvoice.id =
+              :mainContractorInvoiceId
+        """)
+    BigDecimal sumPaidAmountByMainContractorInvoiceId(
+            @Param("mainContractorInvoiceId")
+            Long mainContractorInvoiceId
+    );
+
+    @Query("""
+        select coalesce(
+            sum(a.allocatedAmount),
+            0
+        )
+        from PaymentAllocation a
+        where a.mainContractorInvoice
+                  .mainContract
+                  .investmentTask
+                  .id = :investmentTaskId
+          and upper(a.payment.currency) = 'PLN'
+        """)
+    BigDecimal sumMainContractPaymentsByInvestmentTaskId(
+            @Param("investmentTaskId")
+            Long investmentTaskId
+    );
+
+    @Query("""
+        select coalesce(
+            sum(a.allocatedAmount),
+            0
+        )
+        from PaymentAllocation a
+        where a.mainContractorInvoice
+                  .mainContract
+                  .investmentTask
+                  .id = :investmentTaskId
+          and upper(a.payment.currency) = 'PLN'
+          and a.payment.paymentDate
+                  between :dateFrom and :dateTo
+        """)
+    BigDecimal sumMainContractPaymentsByInvestmentTaskIdAndDateBetween(
+            @Param("investmentTaskId")
+            Long investmentTaskId,
+
+            @Param("dateFrom")
+            LocalDate dateFrom,
+
+            @Param("dateTo")
+            LocalDate dateTo
+    );
+
+    List<PaymentAllocation>
+    findAllByMainContractorInvoice_IdOrderByIdAsc(
+            Long mainContractorInvoiceId
+    );
+
+    boolean existsByPayment_IdAndMainContractorInvoice_Id(
+            Long paymentId,
+            Long mainContractorInvoiceId
     );
 }

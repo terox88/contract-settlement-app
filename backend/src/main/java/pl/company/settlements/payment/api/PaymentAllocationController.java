@@ -79,4 +79,18 @@ public class PaymentAllocationController {
     ) {
         service.delete(id);
     }
+
+    @GetMapping(
+            "/main-contractor-invoice/{invoiceId}"
+    )
+    public List<PaymentAllocationResponse>
+    findAllByMainContractorInvoiceId(
+            @PathVariable Long invoiceId
+    ) {
+
+        return service
+                .findAllByMainContractorInvoiceId(
+                        invoiceId
+                );
+    }
 }

@@ -40,4 +40,15 @@ public class PaymentAllocationResponse {
     private boolean invoiceAmountExceeded;
 
     private boolean hasStatement;
+
+    private Long mainContractorInvoiceId;
+    private String mainContractorInvoiceNumber;
+
+    private Long mainContractId;
+    private String mainContractNumber;
+
+    private Long investmentTaskId;
+
+    private Long mainContractorId;
+    private String mainContractorName;
 }

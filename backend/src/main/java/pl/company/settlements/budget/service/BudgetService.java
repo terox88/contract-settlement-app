@@ -9,6 +9,11 @@ import pl.company.settlements.budget.model.*;
 import pl.company.settlements.budget.repository.BudgetRepository;
 import pl.company.settlements.task.domain.InvestmentTask;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
+import pl.company.settlements.payment.repository.PaymentAllocationRepository;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Year;
 
 import java.time.Year;
 
@@ -19,6 +24,8 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final InvestmentTaskRepository investmentTaskRepository;
+    private final PaymentAllocationRepository
+            paymentAllocationRepository;
 
     public BudgetResponse getByInvestmentTaskId(Long investmentTaskId) {
         return toResponse(
@@ -108,36 +115,102 @@ public class BudgetService {
                 ));
     }
 
-    private BudgetResponse toResponse(Budget budget) {
+    private BudgetResponse toResponse(
+            Budget budget
+    ) {
+
+        Long investmentTaskId =
+                budget.getInvestmentTask()
+                        .getId();
 
         int currentYear =
                 Year.now().getValue();
+
+        LocalDate yearStart =
+                LocalDate.of(
+                        currentYear,
+                        1,
+                        1
+                );
+
+        LocalDate yearEnd =
+                LocalDate.of(
+                        currentYear,
+                        12,
+                        31
+                );
+
+        BigDecimal totalAmount =
+                budget.getTotalAmount();
+
+        BigDecimal paidAmount =
+                paymentAllocationRepository
+                        .sumMainContractPaymentsByInvestmentTaskId(
+                                investmentTaskId
+                        );
+
+        BigDecimal remainingAmount =
+                totalAmount.subtract(
+                        paidAmount
+                );
+
+        BigDecimal currentYearAmount =
+                budget.getAmountForYear(
+                        currentYear
+                );
+
+        BigDecimal currentYearPaidAmount =
+                paymentAllocationRepository
+                        .sumMainContractPaymentsByInvestmentTaskIdAndDateBetween(
+                                investmentTaskId,
+                                yearStart,
+                                yearEnd
+                        );
+
+        BigDecimal currentYearRemainingAmount =
+                currentYearAmount.subtract(
+                        currentYearPaidAmount
+                );
 
         return BudgetResponse.builder()
                 .id(
                         budget.getId()
                 )
                 .investmentTaskId(
-                        budget.getInvestmentTask()
-                                .getId()
-                )
-                .totalAmount(
-                        budget.getTotalAmount()
-                )
-                .currentYear(
-                        currentYear
-                )
-                .currentYearAmount(
-                        budget.getAmountForYear(
-                                currentYear
-                        )
+                        investmentTaskId
                 )
                 .years(
                         budget.getYears()
                                 .stream()
-                                .map(this::toYearResponse)
+                                .map(
+                                        this::toYearResponse
+                                )
                                 .toList()
                 )
+
+                .totalAmount(
+                        totalAmount
+                )
+                .paidAmount(
+                        paidAmount
+                )
+                .remainingAmount(
+                        remainingAmount
+                )
+
+                .currentYear(
+                        currentYear
+                )
+                .currentYearAmount(
+                        currentYearAmount
+                )
+                .currentYearPaidAmount(
+                        currentYearPaidAmount
+                )
+                .currentYearRemainingAmount(
+                        currentYearRemainingAmount
+                )
+
                 .build();
     }
 
