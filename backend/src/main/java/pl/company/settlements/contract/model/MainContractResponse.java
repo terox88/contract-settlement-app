@@ -30,6 +30,10 @@ public class MainContractResponse {
     private BigDecimal invoicedAmount;
     private BigDecimal remainingToInvoice;
 
+    private BigDecimal paidAmount;
+
+    private BigDecimal remainingToPay;
+
     private BigDecimal vatRate;
 
     private LocalDate initialStartDate;
@@ -44,4 +48,6 @@ public class MainContractResponse {
     private String shortDescription;
 
     private BigDecimal totalPenaltyAmount;
+
+
 }

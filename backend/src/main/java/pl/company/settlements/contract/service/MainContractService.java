@@ -17,6 +17,8 @@ import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.repository.ContractorRepository;
 import pl.company.settlements.invoice.model.MainContractInvoicedAmount;
 import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository;
+import pl.company.settlements.payment.model.MainContractPaidAmount;
+import pl.company.settlements.payment.repository.PaymentAllocationRepository;
 import pl.company.settlements.task.domain.InvestmentTask;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
 
@@ -35,56 +37,117 @@ public class MainContractService {
     private final InvestmentTaskRepository investmentTaskRepository;
     private final ContractorRepository contractorRepository;
     private final MainContractorInvoiceRepository mainContractorInvoiceRepository;
+    private final PaymentAllocationRepository paymentAllocationRepository;
 
-    public MainContractResponse getById(Long id) {
-        MainContract contract = findEntityById(id);
+    public MainContractResponse getById(
+            Long id
+    ) {
+
+        MainContract contract =
+                findEntityById(id);
 
         BigDecimal invoicedAmount =
                 mainContractorInvoiceRepository
-                        .sumGrossAmountByMainContractId(id);
+                        .sumGrossAmountByMainContractId(
+                                id
+                        );
+
+        BigDecimal paidAmount =
+                paymentAllocationRepository
+                        .sumPaidAmountByMainContractId(
+                                id
+                        );
 
         return toResponse(
                 contract,
-                invoicedAmount
+                invoicedAmount,
+                paidAmount
         );
     }
 
     public List<MainContractResponse> findAll(
             MainContractFilter filter
     ) {
-        List<MainContract> contracts = repository.findAll(
-                MainContractSpecification.fromFilter(filter),
-                Sort.by(
-                        Sort.Order.desc("contractDate"),
-                        Sort.Order.desc("id")
-                )
-        );
+
+        List<MainContract> contracts =
+                repository.findAll(
+                        MainContractSpecification
+                                .fromFilter(filter),
+
+                        Sort.by(
+                                Sort.Order.desc(
+                                        "contractDate"
+                                ),
+                                Sort.Order.desc(
+                                        "id"
+                                )
+                        )
+                );
 
         if (contracts.isEmpty()) {
             return List.of();
         }
 
-        List<Long> contractIds = contracts.stream()
-                .map(MainContract::getId)
-                .toList();
+        List<Long> contractIds =
+                contracts.stream()
+                        .map(
+                                MainContract::getId
+                        )
+                        .toList();
 
         Map<Long, BigDecimal> invoicedAmounts =
                 mainContractorInvoiceRepository
-                        .sumGrossAmountsByMainContractIds(contractIds)
+                        .sumGrossAmountsByMainContractIds(
+                                contractIds
+                        )
                         .stream()
-                        .collect(Collectors.toMap(
-                                MainContractInvoicedAmount::getMainContractId,
-                                MainContractInvoicedAmount::getInvoicedAmount
-                        ));
+                        .collect(
+                                Collectors.toMap(
+                                        MainContractInvoicedAmount
+                                                ::getMainContractId,
+
+                                        MainContractInvoicedAmount
+                                                ::getInvoicedAmount
+                                )
+                        );
+
+        Map<Long, BigDecimal> paidAmounts =
+                paymentAllocationRepository
+                        .sumPaidAmountsByMainContractIds(
+                                contractIds
+                        )
+                        .stream()
+                        .collect(
+                                Collectors.toMap(
+                                        MainContractPaidAmount
+                                                ::getMainContractId,
+
+                                        MainContractPaidAmount
+                                                ::getPaidAmount
+                                )
+                        );
 
         return contracts.stream()
-                .map(contract -> toResponse(
-                        contract,
-                        invoicedAmounts.getOrDefault(
-                                contract.getId(),
-                                BigDecimal.ZERO
-                        )
-                ))
+                .map(contract -> {
+
+                    BigDecimal invoicedAmount =
+                            invoicedAmounts.getOrDefault(
+                                    contract.getId(),
+                                    BigDecimal.ZERO
+                            );
+
+                    BigDecimal paidAmount =
+                            paidAmounts.getOrDefault(
+                                    contract.getId(),
+                                    BigDecimal.ZERO
+                            );
+
+                    return toResponse(
+                            contract,
+                            invoicedAmount,
+                            paidAmount
+                    );
+                })
                 .toList();
     }
 
@@ -135,6 +198,7 @@ public class MainContractService {
 
         return toResponse(
                 savedContract,
+                BigDecimal.ZERO,
                 BigDecimal.ZERO
         );
     }
@@ -168,9 +232,16 @@ public class MainContractService {
                 mainContractorInvoiceRepository
                         .sumGrossAmountByMainContractId(id);
 
+        BigDecimal paidAmount =
+                paymentAllocationRepository
+                        .sumPaidAmountByMainContractId(
+                                id
+                        );
+
         return toResponse(
                 contract,
-                invoicedAmount
+                invoicedAmount,
+                paidAmount
         );
     }
 
@@ -236,13 +307,21 @@ public class MainContractService {
 
     private MainContractResponse toResponse(
             MainContract contract,
-            BigDecimal invoicedAmount
+            BigDecimal invoicedAmount,
+            BigDecimal paidAmount
     ) {
         BigDecimal currentValue =
                 contract.getCurrentValue();
 
         BigDecimal remainingToInvoice =
-                currentValue.subtract(invoicedAmount);
+                currentValue.subtract(
+                        invoicedAmount
+                );
+
+        BigDecimal remainingToPay =
+                invoicedAmount.subtract(
+                        paidAmount
+                );
 
         return MainContractResponse.builder()
                 .id(contract.getId())
@@ -283,6 +362,13 @@ public class MainContractService {
                 )
                 .remainingToInvoice(
                         remainingToInvoice
+                )
+
+                .paidAmount(
+                        paidAmount
+                )
+                .remainingToPay(
+                        remainingToPay
                 )
 
                 .vatRate(

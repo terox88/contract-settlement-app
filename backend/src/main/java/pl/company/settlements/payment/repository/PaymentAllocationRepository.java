@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pl.company.settlements.payment.domain.PaymentAllocation;
+import pl.company.settlements.payment.model.MainContractPaidAmount;
 import pl.company.settlements.payment.model.PaymentAllocatedAmount;
 import pl.company.settlements.payment.model.SubcontractPaymentAmounts;
 import pl.company.settlements.payment.model.SubcontractorInvoicePaymentAmounts;
@@ -204,5 +205,46 @@ public interface PaymentAllocationRepository
     boolean existsByPayment_IdAndMainContractorInvoice_Id(
             Long paymentId,
             Long mainContractorInvoiceId
+    );
+
+    @Query("""
+        select coalesce(
+            sum(a.allocatedAmount),
+            0
+        )
+        from PaymentAllocation a
+        where a.mainContractorInvoice
+                  .mainContract
+                  .id = :mainContractId
+        """)
+    BigDecimal sumPaidAmountByMainContractId(
+            @Param("mainContractId")
+            Long mainContractId
+    );
+
+    @Query("""
+        select
+            a.mainContractorInvoice
+                .mainContract
+                .id as mainContractId,
+
+            sum(a.allocatedAmount)
+                as paidAmount
+
+        from PaymentAllocation a
+
+        where a.mainContractorInvoice
+                  .mainContract
+                  .id in :mainContractIds
+
+        group by
+            a.mainContractorInvoice
+                .mainContract
+                .id
+        """)
+    List<MainContractPaidAmount>
+    sumPaidAmountsByMainContractIds(
+            @Param("mainContractIds")
+            Collection<Long> mainContractIds
     );
 }
