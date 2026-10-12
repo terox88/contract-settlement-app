@@ -36,6 +36,11 @@ public class InvestmentTask {
     @OneToMany(mappedBy = "investmentTask", cascade = CascadeType.ALL)
     private List<MainContract> mainContracts = new ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private InvestmentTaskStatus status =
+            InvestmentTaskStatus.IN_PROGRESS;
+
     public InvestmentTask(String taskNumber, String name) {
         this.taskNumber = taskNumber;
         this.name = name;

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.task.domain.InvestmentTask;
+import pl.company.settlements.task.domain.InvestmentTaskStatus;
 import pl.company.settlements.task.model.InvestmentTaskCreateRequest;
 import pl.company.settlements.task.model.InvestmentTaskResponse;
 import pl.company.settlements.task.model.InvestmentTaskUpdateRequest;
@@ -22,9 +23,30 @@ public class InvestmentTaskService {
         return toResponse(findEntityById(id));
     }
 
-    public List<InvestmentTaskResponse> findAll() {
-        return repository.findAll()
-                .stream()
+    public List<InvestmentTaskResponse> findAll(
+            InvestmentTaskStatus status
+    ) {
+
+        List<InvestmentTask> tasks;
+
+        if (status == null) {
+
+            tasks = repository.findAll(
+                    org.springframework.data.domain.Sort
+                            .by("taskNumber")
+                            .ascending()
+            );
+
+        } else {
+
+            tasks =
+                    repository
+                            .findAllByStatusOrderByTaskNumberAsc(
+                                    status
+                            );
+        }
+
+        return tasks.stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -50,6 +72,12 @@ public class InvestmentTaskService {
 
         task.setDescription(
                 trimToNull(request.getDescription())
+        );
+
+        task.setStatus(
+                request.getStatus() != null
+                        ? request.getStatus()
+                        : InvestmentTaskStatus.IN_PROGRESS
         );
 
         InvestmentTask savedTask = repository.save(task);
@@ -80,6 +108,9 @@ public class InvestmentTaskService {
         task.setName(request.getName().trim());
         task.setDescription(
                 trimToNull(request.getDescription())
+        );
+        task.setStatus(
+                request.getStatus()
         );
 
         return toResponse(task);
@@ -122,6 +153,8 @@ public class InvestmentTaskService {
                 .taskNumber(task.getTaskNumber())
                 .name(task.getName())
                 .description(task.getDescription())
+                .status(task.getStatus())
+                .statusLabel(task.getStatus().getLabel())
                 .build();
     }
 }

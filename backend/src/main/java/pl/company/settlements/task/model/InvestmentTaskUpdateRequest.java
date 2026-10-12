@@ -1,6 +1,8 @@
 package pl.company.settlements.task.model;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import pl.company.settlements.task.domain.InvestmentTaskStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,4 +17,7 @@ public class InvestmentTaskUpdateRequest {
     private String name;
 
     private String description;
+
+    @NotNull
+    private InvestmentTaskStatus status;
 }
