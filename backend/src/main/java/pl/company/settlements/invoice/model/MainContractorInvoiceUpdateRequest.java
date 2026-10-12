@@ -11,6 +11,10 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import jakarta.validation.constraints.NotEmpty;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -39,9 +43,9 @@ public class MainContractorInvoiceUpdateRequest {
     @Positive
     private BigDecimal grossAmount;
 
-    @PositiveOrZero
-    @DecimalMax("100.00")
-    private BigDecimal vatRate;
+    @NotEmpty
+    private List<String> vatRates =
+            new ArrayList<>();
 
     @NotBlank
     @Size(min = 3, max = 3)

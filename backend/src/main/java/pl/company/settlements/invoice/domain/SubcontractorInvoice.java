@@ -10,7 +10,9 @@ import pl.company.settlements.payment.domain.PaymentAllocation;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -36,6 +38,21 @@ public class SubcontractorInvoice extends Invoice {
             orphanRemoval = true
     )
     private List<PaymentAllocation> paymentAllocations = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "subcontractor_invoice_vat_rate",
+            joinColumns = @JoinColumn(
+                    name = "subcontractor_invoice_id"
+            )
+    )
+    @Column(
+            name = "vat_rate",
+            nullable = false,
+            length = 20
+    )
+    private Set<String> vatRates =
+            new LinkedHashSet<>();
 
     public BigDecimal getPaidAmount() {
         return paymentAllocations.stream()

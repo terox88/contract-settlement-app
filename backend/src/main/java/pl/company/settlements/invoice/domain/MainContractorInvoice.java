@@ -8,7 +8,9 @@ import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.file.domain.DocumentAttachment;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -34,6 +36,21 @@ public class MainContractorInvoice extends Invoice {
             orphanRemoval = true
     )
     private List<MainInvoiceSettlement> settlements = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "main_contractor_invoice_vat_rate",
+            joinColumns = @JoinColumn(
+                    name = "main_contractor_invoice_id"
+            )
+    )
+    @Column(
+            name = "vat_rate",
+            nullable = false,
+            length = 20
+    )
+    private Set<String> vatRates =
+            new LinkedHashSet<>();
 
     public MainContractorInvoice(
             MainContract mainContract

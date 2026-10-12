@@ -39,9 +39,6 @@ public abstract class Invoice {
     @Column(name = "gross_amount", nullable = false, precision = 15, scale = 2)
     protected BigDecimal grossAmount;
 
-    @Column(name = "vat_rate", precision = 5, scale = 2)
-    protected BigDecimal vatRate;
-
     @Column(length = 1000)
     protected String description;
 

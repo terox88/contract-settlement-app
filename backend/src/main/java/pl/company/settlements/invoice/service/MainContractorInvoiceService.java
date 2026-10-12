@@ -95,7 +95,7 @@ public class MainContractorInvoiceService {
                 request.getNetAmount(),
                 request.getVatAmount(),
                 request.getGrossAmount(),
-                request.getVatRate(),
+                request.getVatRates(),
                 request.getCurrency(),
                 request.getDescription()
         );
@@ -134,7 +134,7 @@ public class MainContractorInvoiceService {
                 request.getNetAmount(),
                 request.getVatAmount(),
                 request.getGrossAmount(),
-                request.getVatRate(),
+                request.getVatRates(),
                 request.getCurrency(),
                 request.getDescription()
         );
@@ -199,7 +199,7 @@ public class MainContractorInvoiceService {
             BigDecimal netAmount,
             BigDecimal vatAmount,
             BigDecimal grossAmount,
-            BigDecimal vatRate,
+            List<String> vatRates,
             String currency,
             String description
     ) {
@@ -231,9 +231,15 @@ public class MainContractorInvoiceService {
                 grossAmount
         );
 
-        invoice.setVatRate(
-                vatRate
-        );
+        invoice.getVatRates()
+                .clear();
+
+        invoice.getVatRates()
+                .addAll(
+                        normalizeVatRates(
+                                vatRates
+                        )
+                );
 
         invoice.setCurrency(
                 normalizeCurrency(currency)
@@ -359,8 +365,10 @@ public class MainContractorInvoiceService {
                         invoice.getGrossAmount()
                 )
 
-                .vatRate(
-                        invoice.getVatRate()
+                .vatRates(
+                        invoice.getVatRates()
+                                .stream()
+                                .toList()
                 )
 
                 .currency(
@@ -372,5 +380,45 @@ public class MainContractorInvoiceService {
                 )
 
                 .build();
+    }
+
+    private List<String> normalizeVatRates(
+            List<String> vatRates
+    ) {
+
+        if (vatRates == null
+                || vatRates.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "At least one VAT rate is required"
+            );
+        }
+
+        List<String> normalized =
+                vatRates.stream()
+                        .map(rate -> {
+
+                            if (rate == null
+                                    || rate.isBlank()) {
+
+                                throw new IllegalArgumentException(
+                                        "VAT rate cannot be blank"
+                                );
+                            }
+
+                            return rate
+                                    .trim()
+                                    .replaceAll(
+                                            "\\s+",
+                                            " "
+                                    )
+                                    .toUpperCase(
+                                            Locale.ROOT
+                                    );
+                        })
+                        .distinct()
+                        .toList();
+
+        return normalized;
     }
 }

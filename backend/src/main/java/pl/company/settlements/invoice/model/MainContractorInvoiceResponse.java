@@ -5,6 +5,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Builder
@@ -32,7 +33,7 @@ public class MainContractorInvoiceResponse {
     private BigDecimal vatAmount;
     private BigDecimal grossAmount;
 
-    private BigDecimal vatRate;
+    private List<String> vatRates;
 
     private String currency;
 
