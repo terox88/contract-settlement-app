@@ -393,17 +393,88 @@ body {
 }
 
 .budget-years {
-  margin-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
 }
 
-.budget-year-row {
+.budget-year-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+}
+
+.budget-year-card-header {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.budget-year-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.budget-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.budget-year-metric {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0;
-  border-bottom:
-          1px solid #e5e7eb;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f9fafb;
+  min-width: 0;
+}
+
+.budget-year-metric-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.budget-year-metric-value {
+  font-size: 16px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .budget-year-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.budget-year-caption {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.budget-year-cell strong {
+  line-height: 1.35;
+}
+
+@media (max-width: 700px) {
+  .budget-year-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .budget-year-label {
+    padding-bottom: 6px;
+    border-bottom: 1px dashed #e5e7eb;
+  }
 }
 
 

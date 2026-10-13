@@ -1,0 +1,647 @@
+
+/* =========================================================
+   BUDGET CARD — BASE
+   ========================================================= */
+
+.budget-ui {
+    --budget-text: #1f2937;
+    --budget-muted: #6b7280;
+    --budget-border: #e5e7eb;
+    --budget-background: #f8fafc;
+    --budget-primary: #2563eb;
+    --budget-danger: #b42318;
+
+    box-sizing: border-box;
+    container: budget-panel / inline-size;
+
+    width: 100%;
+    min-width: 0;
+    padding: 28px;
+
+    border: 1px solid var(--budget-border);
+    border-radius: 14px;
+    background: #ffffff;
+
+    color: var(--budget-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.035);
+}
+
+.budget-ui *,
+.budget-ui *::before,
+.budget-ui *::after {
+    box-sizing: border-box;
+}
+
+.budget-ui strong {
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.budget-ui-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.budget-ui-eyebrow {
+    display: block;
+    margin-bottom: 6px;
+
+    color: var(--budget-primary);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+}
+
+.budget-ui-title {
+    margin: 0;
+
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: normal;
+}
+
+.budget-ui-subtitle {
+    margin: 7px 0 0;
+
+    color: var(--budget-muted);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.budget-ui-currency {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 6px 11px;
+    border: 1px solid var(--budget-border);
+    border-radius: 8px;
+
+    color: var(--budget-muted);
+    background: #ffffff;
+
+    font-size: 12px;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+.budget-ui-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.budget-ui-section-heading h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.budget-ui-section-heading > span {
+    color: var(--budget-muted);
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   FINANCIAL TILES
+   ========================================================= */
+
+.budget-ui-total-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.budget-ui-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+
+    min-width: 0;
+    min-height: 125px;
+    padding: 18px;
+
+    border: 1px solid var(--budget-border);
+    border-radius: 11px;
+    background: #ffffff;
+
+    transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+}
+
+.budget-ui-tile:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.035);
+}
+
+.budget-ui-tile__label {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+
+    color: var(--budget-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.budget-ui-tile__value {
+    display: block;
+    width: 100%;
+    min-width: 0;
+
+    color: var(--budget-text);
+    font-size: clamp(17px, 2vw, 21px);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: normal;
+    font-variant-numeric: tabular-nums;
+
+    overflow-wrap: anywhere;
+}
+
+.budget-ui-tile__description {
+    display: block;
+    margin-top: auto;
+    padding-top: 12px;
+
+    color: #8893a3;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.budget-ui-tile--primary {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.budget-ui-tile--highlight {
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.budget-ui-tile--highlight .budget-ui-tile__label {
+    color: #475f86;
+}
+
+.budget-ui-tile--highlight .budget-ui-tile__value {
+    color: #1d4ed8;
+}
+
+.budget-ui-tile--warning .budget-ui-tile__value {
+    color: var(--budget-danger);
+}
+
+.budget-ui-tile__warning {
+    margin-top: 8px;
+    color: var(--budget-danger);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+
+/* =========================================================
+   CURRENT YEAR SECTION
+   ========================================================= */
+
+.budget-ui-annual-section {
+    margin-top: 28px;
+    padding: 24px;
+
+    border: 1px solid var(--budget-border);
+    border-radius: 12px;
+    background: var(--budget-background);
+}
+
+.budget-ui-annual-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 18px;
+
+    margin-bottom: 22px;
+}
+
+.budget-ui-annual-header h4 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.budget-ui-annual-budget {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    min-width: 0;
+}
+
+.budget-ui-annual-budget > span {
+    color: var(--budget-muted);
+    font-size: 12px;
+}
+
+.budget-ui-annual-budget > strong {
+    color: var(--budget-text);
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.budget-ui-annual-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.budget-ui-annual-grid .budget-ui-tile {
+    min-height: 125px;
+    padding: 18px;
+}
+
+
+/* =========================================================
+   COMMITMENT PROGRESS
+   ========================================================= */
+
+.budget-ui-progress-section {
+    margin-top: 22px;
+}
+
+.budget-ui-progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.budget-ui-progress-info > span {
+    color: var(--budget-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.budget-ui-progress-info > strong {
+    color: var(--budget-text);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.budget-ui-progress-track {
+    width: 100%;
+    height: 7px;
+
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.budget-ui-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--budget-primary);
+    transition: width 0.2s ease;
+}
+
+.budget-ui-alert {
+    margin: 14px 0 0;
+    color: var(--budget-danger);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   EXPAND BUTTON
+   ========================================================= */
+
+.budget-ui-details {
+    margin-top: 22px;
+}
+
+.budget-ui-toggle {
+    display: inline-flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+
+    min-height: 42px;
+    padding: 10px 15px;
+
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+
+    color: #374151;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+
+    cursor: pointer;
+
+    transition:
+            background 0.15s ease,
+            border-color 0.15s ease;
+}
+
+.budget-ui-toggle:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.budget-ui-toggle:focus-visible {
+    outline: 2px solid var(--budget-primary);
+    outline-offset: 3px;
+}
+
+.budget-ui-chevron {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.budget-ui-chevron--open {
+    transform: rotate(180deg);
+}
+
+
+/* =========================================================
+   YEARLY FINANCING
+   ========================================================= */
+
+.budget-ui-years {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid var(--budget-border);
+}
+
+.budget-ui-years-heading {
+    margin-bottom: 18px;
+}
+
+.budget-ui-years-heading h4 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.budget-ui-years-heading p {
+    margin: 0;
+    color: var(--budget-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.budget-ui-years-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.budget-ui-year-card {
+    min-width: 0;
+    padding: 20px;
+
+    border: 1px solid var(--budget-border);
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+.budget-ui-year-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px;
+
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.budget-ui-year-card__heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.budget-ui-year-card__year {
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.budget-ui-year-card__current {
+    padding: 5px 8px;
+    border-radius: 6px;
+
+    background: #eff6ff;
+    color: #1d4ed8;
+
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.budget-ui-year-card__budget {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    min-width: 0;
+}
+
+.budget-ui-year-card__budget > span {
+    color: var(--budget-muted);
+    font-size: 11px;
+}
+
+.budget-ui-year-card__budget > strong {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.budget-ui-year-card__metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.budget-ui-year-card__metric {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    min-width: 0;
+    padding: 14px;
+
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.budget-ui-year-card__metric > span {
+    color: var(--budget-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.budget-ui-year-card__metric > strong {
+    color: var(--budget-text);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.budget-ui-year-card__metric--available {
+    background: #eff6ff;
+}
+
+.budget-ui-year-card__metric--available > strong {
+    color: #1d4ed8;
+}
+
+.budget-ui-year-card__metric--warning > strong {
+    color: var(--budget-danger);
+}
+
+.budget-ui-year-card .budget-ui-progress-section {
+    margin-top: 20px;
+}
+
+.budget-ui-year-card .budget-ui-progress-track {
+    height: 5px;
+}
+
+.budget-ui-year-card .budget-ui-progress-info > span,
+.budget-ui-year-card .budget-ui-progress-info > strong {
+    font-size: 11px;
+}
+
+.budget-ui-empty {
+    margin: 0;
+    padding: 20px;
+    color: var(--budget-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+
+/* =========================================================
+   RESPONSIVE — BASED ON COMPONENT WIDTH
+   ========================================================= */
+
+@container budget-panel (max-width: 780px) {
+    .budget-ui-total-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .budget-ui-years-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@container budget-panel (max-width: 520px) {
+    .budget-ui-total-grid,
+    .budget-ui-annual-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .budget-ui-annual-header {
+        flex-direction: column;
+    }
+
+    .budget-ui-annual-budget {
+        align-items: flex-start;
+    }
+}
+
+@container budget-panel (max-width: 420px) {
+    .budget-ui-year-card__header {
+        flex-direction: column;
+    }
+
+    .budget-ui-year-card__budget {
+        align-items: flex-start;
+    }
+
+    .budget-ui-year-card__metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE — OUTER COMPONENT
+   ========================================================= */
+
+@media (max-width: 680px) {
+    .budget-ui {
+        padding: 18px;
+    }
+
+    .budget-ui-header {
+        margin-bottom: 24px;
+    }
+
+    .budget-ui-title {
+        font-size: 18px;
+    }
+
+    .budget-ui-annual-section {
+        margin-top: 24px;
+        padding: 16px;
+    }
+
+    .budget-ui-year-card {
+        padding: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .budget-ui *,
+    .budget-ui *::before,
+    .budget-ui *::after {
+        transition: none;
+    }
+}
