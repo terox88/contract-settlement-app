@@ -14,8 +14,9 @@ import pl.company.settlements.payment.repository.PaymentAllocationRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.List;
+import java.util.Map;
 
-import java.time.Year;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class BudgetService {
     private final InvestmentTaskRepository investmentTaskRepository;
     private final PaymentAllocationRepository
             paymentAllocationRepository;
+    private final BudgetCommitmentService budgetCommitmentService;
 
     public BudgetResponse getByInvestmentTaskId(Long investmentTaskId) {
         return toResponse(
@@ -140,6 +142,12 @@ public class BudgetService {
                         31
                 );
 
+        /*
+         * =========================================================
+         * BUDŻET CAŁKOWITY
+         * =========================================================
+         */
+
         BigDecimal totalAmount =
                 budget.getTotalAmount();
 
@@ -153,6 +161,12 @@ public class BudgetService {
                 totalAmount.subtract(
                         paidAmount
                 );
+
+        /*
+         * =========================================================
+         * BUDŻET BIEŻĄCEGO ROKU
+         * =========================================================
+         */
 
         BigDecimal currentYearAmount =
                 budget.getAmountForYear(
@@ -172,6 +186,94 @@ public class BudgetService {
                         currentYearPaidAmount
                 );
 
+        /*
+         * =========================================================
+         * ZAANGAŻOWANIE FINANSOWE
+         * =========================================================
+         *
+         * Dla umów bez limitów:
+         * cała aktualna wartość umowy przypisana
+         * jest do roku zawarcia umowy.
+         *
+         * Dla umów z limitami:
+         * zaangażowanie wynika z limitów
+         * przypisanych do poszczególnych lat.
+         */
+
+        Map<Integer, BigDecimal> commitments =
+                budgetCommitmentService
+                        .calculateByYear(
+                                investmentTaskId
+                        );
+
+        BigDecimal currentYearCommittedAmount =
+                commitments.getOrDefault(
+                        currentYear,
+                        BigDecimal.ZERO
+                );
+
+        /*
+         * Wolne środki to budżet pomniejszony
+         * o zaangażowanie finansowe.
+         *
+         * Nie odejmujemy tutaj ponownie płatności,
+         * ponieważ są objęte zaangażowaniem.
+         */
+
+        BigDecimal currentYearAvailableAmount =
+                currentYearAmount.subtract(
+                        currentYearCommittedAmount
+                );
+
+        /*
+         * =========================================================
+         * BUDŻET W POSZCZEGÓLNYCH LATACH
+         * =========================================================
+         */
+
+        List<BudgetYearResponse> years =
+                budget.getYears()
+                        .stream()
+                        .map(year -> {
+
+                            BigDecimal committedAmount =
+                                    commitments.getOrDefault(
+                                            year.getYear(),
+                                            BigDecimal.ZERO
+                                    );
+
+                            BigDecimal availableAmount =
+                                    year.getAmount()
+                                            .subtract(
+                                                    committedAmount
+                                            );
+
+                            return BudgetYearResponse.builder()
+                                    .id(
+                                            year.getId()
+                                    )
+                                    .year(
+                                            year.getYear()
+                                    )
+                                    .amount(
+                                            year.getAmount()
+                                    )
+                                    .committedAmount(
+                                            committedAmount
+                                    )
+                                    .availableAmount(
+                                            availableAmount
+                                    )
+                                    .build();
+                        })
+                        .toList();
+
+        /*
+         * =========================================================
+         * RESPONSE
+         * =========================================================
+         */
+
         return BudgetResponse.builder()
                 .id(
                         budget.getId()
@@ -179,15 +281,14 @@ public class BudgetService {
                 .investmentTaskId(
                         investmentTaskId
                 )
+
                 .years(
-                        budget.getYears()
-                                .stream()
-                                .map(
-                                        this::toYearResponse
-                                )
-                                .toList()
+                        years
                 )
 
+                /*
+                 * Budżet całkowity
+                 */
                 .totalAmount(
                         totalAmount
                 )
@@ -198,6 +299,9 @@ public class BudgetService {
                         remainingAmount
                 )
 
+                /*
+                 * Budżet bieżącego roku
+                 */
                 .currentYear(
                         currentYear
                 )
@@ -209,6 +313,16 @@ public class BudgetService {
                 )
                 .currentYearRemainingAmount(
                         currentYearRemainingAmount
+                )
+
+                /*
+                 * Zaangażowanie i wolne środki
+                 */
+                .currentYearCommittedAmount(
+                        currentYearCommittedAmount
+                )
+                .currentYearAvailableAmount(
+                        currentYearAvailableAmount
                 )
 
                 .build();

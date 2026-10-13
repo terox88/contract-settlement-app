@@ -12,4 +12,7 @@ public class BudgetYearResponse {
     private Long id;
     private int year;
     private BigDecimal amount;
+    private BigDecimal committedAmount;
+
+    private BigDecimal availableAmount;
 }

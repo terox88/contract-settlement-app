@@ -29,4 +29,8 @@ public class BudgetResponse {
     private BigDecimal currentYearPaidAmount;
 
     private BigDecimal currentYearRemainingAmount;
+
+    private BigDecimal currentYearCommittedAmount;
+
+    private BigDecimal currentYearAvailableAmount;
 }
