@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import http from './api/http';
 import './FinancialLimitsCard.css';
 
-
 const formatter = new Intl.NumberFormat('pl-PL', {
   style: 'currency',
   currency: 'PLN',
@@ -215,39 +214,17 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
     }));
 
     try {
-      if (!limit) {
-        await http.post('/financial-limits', {
-          mainContractId: contractId,
-          years: prepared,
-        });
-      } else {
-        // The current API saves years separately (no atomic replace endpoint).
-        const before = new Map((limit.years ?? []).map((year) => [Number(year.year), cents(year.amount)]));
-        const updated = prepared.filter((year) =>
-          before.has(year.year) && cents(year.amount) !== before.get(year.year)
-        );
-        const added = prepared.filter((year) => !before.has(year.year));
-
-        // Reduce existing commitments before increasing others.
-        const decreasing = updated.filter((year) => cents(year.amount) < before.get(year.year));
-        const increasing = updated.filter((year) => cents(year.amount) > before.get(year.year));
-        for (const year of decreasing) {
-          await http.put(`/financial-limits/main-contract/${contractId}/years/${year.year}`, { amount: year.amount });
-        }
-        for (const year of increasing) {
-          await http.put(`/financial-limits/main-contract/${contractId}/years/${year.year}`, { amount: year.amount });
-        }
-        for (const year of added) {
-          await http.post(`/financial-limits/main-contract/${contractId}/years`, year);
-        }
-      }
+      // One request: all years are saved atomically by Spring Boot.
+      await http.put(`/financial-limits/main-contract/${contractId}/plan`, {
+        years: prepared,
+      });
       setEditing(false);
       setNotice('Limity finansowe zostały zapisane.');
       setReload((value) => value + 1);
       onChanged?.();
     } catch (err) {
       setEditing(false);
-      setError(`Nie udało się zapisać wszystkich zmian: ${errorMessage(err)}. Część lat mogła zostać zmieniona — sprawdź aktualne limity.`);
+      setError(`Nie udało się zapisać planu finansowego: ${errorMessage(err)}. Żadna zmiana z tego żądania nie została zapisana.`);
       setReload((value) => value + 1);
       onChanged?.();
     } finally {

@@ -1,11 +1,23 @@
 package pl.company.settlements.contract.domain;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.OrderBy;
+import jakarta.persistence.Table;
 import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Entity
@@ -43,35 +55,19 @@ public class FinancialLimit {
 
     public BigDecimal getAmountForYear(int year) {
         return years.stream()
-                .filter(limitYear -> limitYear.getYear() == year)
+                .filter(item -> item.getYear() == year)
                 .map(FinancialLimitYear::getAmount)
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
     }
 
     public void addYear(int year, BigDecimal amount) {
-        boolean yearAlreadyExists = years.stream()
-                .anyMatch(limitYear -> limitYear.getYear() == year);
-
-        if (yearAlreadyExists) {
+        if (years.stream().anyMatch(item -> item.getYear() == year)) {
             throw new IllegalArgumentException(
                     "Financial limit for year " + year + " already exists"
             );
         }
-
         years.add(new FinancialLimitYear(this, year, amount));
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public MainContract getMainContract() {
-        return mainContract;
-    }
-
-    public List<FinancialLimitYear> getYears() {
-        return years;
     }
 
     public void changeAmountForYear(int year, BigDecimal amount) {
@@ -81,7 +77,29 @@ public class FinancialLimit {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Financial limit for year " + year + " does not exist"
                 ));
-
         limitYear.changeAmount(amount);
+    }
+
+    /**
+     * Reconciles managed JPA children instead of clear()+reinsert().
+     * Keeps existing rows for unchanged years and respects orphanRemoval.
+     * Called only after all plan validations have succeeded.
+     */
+    public void replaceYears(Map<Integer, BigDecimal> newPlan) {
+        years.removeIf(year -> !newPlan.containsKey(year.getYear()));
+
+        for (Map.Entry<Integer, BigDecimal> entry : newPlan.entrySet()) {
+            FinancialLimitYear existing = years.stream()
+                    .filter(year -> year.getYear() == entry.getKey())
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing == null) {
+                years.add(new FinancialLimitYear(this, entry.getKey(), entry.getValue()));
+            } else {
+                existing.changeAmount(entry.getValue());
+            }
+        }
+        years.sort(Comparator.comparingInt(FinancialLimitYear::getYear));
     }
 }

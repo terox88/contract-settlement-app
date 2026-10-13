@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pl.company.settlements.payment.domain.PaymentAllocation;
 import pl.company.settlements.payment.model.MainContractPaidAmount;
+import pl.company.settlements.payment.model.MainContractPaymentByDate;
 import pl.company.settlements.payment.model.PaymentAllocatedAmount;
 import pl.company.settlements.payment.model.SubcontractPaymentAmounts;
 import pl.company.settlements.payment.model.SubcontractorInvoicePaymentAmounts;
@@ -16,6 +17,19 @@ import java.util.List;
 
 public interface PaymentAllocationRepository
         extends JpaRepository<PaymentAllocation, Long> {
+
+    /** Annual payment totals are derived from the actual payment date. */
+    @Query("""
+        select a.payment.paymentDate as paymentDate,
+               upper(a.payment.currency) as currency,
+               sum(a.allocatedAmount) as paidAmount
+        from PaymentAllocation a
+        where a.mainContractorInvoice.mainContract.id = :mainContractId
+        group by a.payment.paymentDate, upper(a.payment.currency)
+        """)
+    List<MainContractPaymentByDate> sumMainContractPaymentsByDate(
+            @Param("mainContractId") Long mainContractId
+    );
 
     boolean existsByPayment_IdAndSubcontractorInvoice_Id(
             Long paymentId,
