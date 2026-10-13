@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import http from './api/http';
-import '../../../../Users/Terox/Downloads/FinancialLimitsCard.css';
+import './FinancialLimitsCard.css';
+
 
 const formatter = new Intl.NumberFormat('pl-PL', {
   style: 'currency',
@@ -53,7 +54,7 @@ function errorMessage(error) {
   if (typeof data === 'string' && data.trim()) return data;
   if (data?.message) return data.message;
   if (data?.detail) return data.detail;
-  return 'Nie udało się zapisać zmian. Sprawdź połączenie i spróbuj ponownie.';
+  return 'Wystąpił błąd komunikacji z serwerem. Spróbuj ponownie.';
 }
 
 let nextRowKey = 0;
@@ -95,13 +96,13 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
     async function load() {
       try {
         const [limitResult, budgetResult] = await Promise.all([
-          http.get(`/api/financial-limits/main-contract/${contractId}`)
+          http.get(`/financial-limits/main-contract/${contractId}`)
             .then((response) => response.data)
             .catch((err) => {
               if (isMissingLimit(err)) return null;
               throw err;
             }),
-          http.get(`/api/budgets/investment-task/${investmentTaskId}`)
+          http.get(`/budgets/investment-task/${investmentTaskId}`)
             .then((response) => response.data)
             .catch((err) => {
               if (err?.response?.status === 404) return null;
@@ -215,7 +216,7 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
 
     try {
       if (!limit) {
-        await http.post('/api/financial-limits', {
+        await http.post('/financial-limits', {
           mainContractId: contractId,
           years: prepared,
         });
@@ -231,13 +232,13 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
         const decreasing = updated.filter((year) => cents(year.amount) < before.get(year.year));
         const increasing = updated.filter((year) => cents(year.amount) > before.get(year.year));
         for (const year of decreasing) {
-          await http.put(`/api/financial-limits/main-contract/${contractId}/years/${year.year}`, { amount: year.amount });
+          await http.put(`/financial-limits/main-contract/${contractId}/years/${year.year}`, { amount: year.amount });
         }
         for (const year of increasing) {
-          await http.put(`/api/financial-limits/main-contract/${contractId}/years/${year.year}`, { amount: year.amount });
+          await http.put(`/financial-limits/main-contract/${contractId}/years/${year.year}`, { amount: year.amount });
         }
         for (const year of added) {
-          await http.post(`/api/financial-limits/main-contract/${contractId}/years`, year);
+          await http.post(`/financial-limits/main-contract/${contractId}/years`, year);
         }
       }
       setEditing(false);
@@ -283,13 +284,13 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
                   <strong>{money(contract.currentValue)}</strong>
                 </div>
                 <div>
-                  <span>{limit ? 'Suma limitów' : 'Zaangażowanie bez limitów'}</span>
+                  <span>{limit ? 'Suma limitów' : 'Zaangażowanie'}</span>
                   <strong>{money((totalLimitCents ?? 0) / 100)}</strong>
                 </div>
               </div>
               {!limit && (
                 <p className="finlim__hint">
-                  Umowa nie ma limitów rocznych — jej pełna wartość jest angażowana w roku zawarcia umowy.
+                  Umowa roczna
                 </p>
               )}
               <div className="finlim__year-list">

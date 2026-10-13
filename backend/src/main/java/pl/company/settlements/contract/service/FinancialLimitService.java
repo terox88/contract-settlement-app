@@ -13,6 +13,7 @@ import pl.company.settlements.contract.model.FinancialLimitYearRequest;
 import pl.company.settlements.contract.model.FinancialLimitYearResponse;
 import pl.company.settlements.contract.repository.FinancialLimitRepository;
 import pl.company.settlements.contract.repository.MainContractRepository;
+import pl.company.settlements.common.error.ResourceNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -25,9 +26,14 @@ public class FinancialLimitService {
     public FinancialLimitResponse getByMainContractId(
             Long mainContractId
     ) {
-        return toResponse(
-                findEntityByMainContractId(mainContractId)
-        );
+        return financialLimitRepository
+                .findByMainContract_Id(mainContractId)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Financial limits for main contract with id "
+                                + mainContractId
+                                + " have not been defined"
+                ));
     }
 
     @Transactional
