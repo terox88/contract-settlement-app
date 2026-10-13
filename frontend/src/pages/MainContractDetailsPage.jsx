@@ -10,6 +10,8 @@ import {
 
 import http from '../api/http';
 
+import FinancialLimitsCard from '../FinancialLimitsCard';
+
 const currencyFormatter =
     new Intl.NumberFormat(
         'pl-PL',
@@ -344,12 +346,7 @@ export default function MainContractDetailsPage() {
                     }
                 />
 
-                <SectionCard
-                    title="Limity finansowe"
-                    description={
-                        'Plan finansowania umowy w poszczególnych latach.'
-                    }
-                />
+                <FinancialLimitsCard contract={contract} />
 
                 <SectionCard
                     title="Kary umowne"
