@@ -11,13 +11,18 @@ http.interceptors.response.use(
     (response) => response,
 
     (error) => {
-        const message =
-            error.response?.data?.message
-            ?? 'Wystąpił nieoczekiwany błąd';
+        const data = error.response?.data;
+        const message = data?.message ?? data?.detail;
 
-        return Promise.reject(
-            new Error(message)
-        );
+        error.message =
+            typeof message === 'string' && message.trim()
+                ? message
+                : !error.response && error.code !== 'ERR_CANCELED'
+                    ? 'Nie można połączyć się z serwerem. Spróbuj ponownie.'
+                    : 'Wystąpił nieoczekiwany błąd';
+
+        // Zachowujemy response.status i response.data dla wywołujących.
+        return Promise.reject(error);
     }
 );
 

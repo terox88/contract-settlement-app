@@ -1,6 +1,8 @@
 package pl.company.settlements.contractor.service;
 
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.contractor.domain.Contractor;
@@ -8,7 +10,9 @@ import pl.company.settlements.contractor.model.ContractorCreateRequest;
 import pl.company.settlements.contractor.model.ContractorResponse;
 import pl.company.settlements.contractor.model.ContractorUpdateRequest;
 import pl.company.settlements.contractor.repository.ContractorRepository;
+import pl.company.settlements.common.error.ConflictException;
 
+import java.sql.SQLException;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -32,14 +36,15 @@ public class ContractorService {
 
     @Transactional
     public ContractorResponse create(ContractorCreateRequest request) {
+        return toResponse(createEntity(request));
+    }
+
+    @Transactional
+    public Contractor createEntity(ContractorCreateRequest request) {
         String normalizedTaxId = normalizeTaxId(request.getTaxId());
 
         if (repository.existsByTaxId(normalizedTaxId)) {
-            throw new IllegalArgumentException(
-                    "Contractor with tax ID "
-                            + normalizedTaxId
-                            + " already exists"
-            );
+            throw duplicateTaxId(normalizedTaxId);
         }
 
         Contractor contractor = new Contractor(
@@ -60,9 +65,38 @@ public class ContractorService {
                 request.getEmail()
         );
 
-        Contractor savedContractor = repository.save(contractor);
+        try {
+            // Flush pozwala zamienić konflikt równoczesnych zapisów NIP
+            // na 409, zanim metoda zwróci odpowiedź. Nie zatwierdza transakcji.
+            return repository.saveAndFlush(contractor);
+        } catch (DataIntegrityViolationException error) {
+            if (isTaxIdConflict(error)) throw duplicateTaxId(normalizedTaxId);
+            throw error;
+        }
+    }
 
-        return toResponse(savedContractor);
+    private ConflictException duplicateTaxId(String taxId) {
+        return new ConflictException(
+                "Wykonawca o NIP " + taxId
+                        + " już istnieje. Wyszukaj go i wybierz istniejącego wykonawcę."
+        );
+    }
+
+    private boolean isTaxIdConflict(DataIntegrityViolationException error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation
+                    && violation.getConstraintName() != null) {
+                return "23505".equals(violation.getSQLState())
+                        && violation.getConstraintName().toLowerCase(Locale.ROOT).contains("tax_id");
+            }
+            if (cause instanceof SQLException sqlError
+                    && "23505".equals(sqlError.getSQLState())
+                    && String.valueOf(sqlError.getMessage())
+                            .toLowerCase(Locale.ROOT).contains("tax_id")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Transactional

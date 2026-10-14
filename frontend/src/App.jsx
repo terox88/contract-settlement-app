@@ -10,6 +10,11 @@ import InvestmentTaskListPage
 import InvestmentTaskDetailsPage
     from './pages/InvestmentTaskDetailsPage';
 
+import InvestmentTaskFormPage
+    from './pages/InvestmentTaskFormPage';
+
+import './pages/InvestmentTaskFormPage.css';
+
 import MainContractDetailsPage
     from './pages/MainContractDetailsPage';
 
@@ -31,6 +36,20 @@ export default function App() {
                 path="/tasks"
                 element={
                     <InvestmentTaskListPage />
+                }
+            />
+
+            <Route
+                path="/tasks/new"
+                element={
+                    <InvestmentTaskFormPage />
+                }
+            />
+
+            <Route
+                path="/tasks/:taskId/edit"
+                element={
+                    <InvestmentTaskFormPage />
                 }
             />
 

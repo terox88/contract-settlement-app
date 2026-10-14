@@ -9,7 +9,7 @@ import {
 } from 'react-router-dom';
 
 import http from '../api/http';
-import BudgetCard from '../BudgetCard';
+import BudgetSection from '../BudgetSection';
 
 const currencyFormatter =
     new Intl.NumberFormat(
@@ -46,9 +46,6 @@ export default function InvestmentTaskDetailsPage() {
     const { taskId } = useParams();
 
     const [task, setTask] =
-        useState(null);
-
-    const [budget, setBudget] =
         useState(null);
 
     const [contracts, setContracts] =
@@ -115,25 +112,6 @@ export default function InvestmentTaskDetailsPage() {
                 taskContracts
             );
 
-            /*
-             * Brak budżetu nie blokuje
-             * całej strony zadania.
-             */
-            try {
-
-                const budgetResponse =
-                    await http.get(
-                        `/budgets/investment-task/${taskId}`
-                    );
-
-                setBudget(
-                    budgetResponse.data
-                );
-
-            } catch {
-                setBudget(null);
-            }
-
         } catch (error) {
 
             setError(
@@ -199,11 +177,20 @@ export default function InvestmentTaskDetailsPage() {
 
                     </div>
 
-                    {task.statusLabel && (
-                        <span className="task-details-status">
-              {task.statusLabel}
-            </span>
-                    )}
+                    <div className="task-form-actions">
+                        {task.statusLabel && (
+                            <span className="task-details-status">
+                                {task.statusLabel}
+                            </span>
+                        )}
+
+                        <Link
+                            to={`/tasks/${taskId}/edit`}
+                            className="task-form-button task-form-button-secondary"
+                        >
+                            Edytuj zadanie
+                        </Link>
+                    </div>
 
                 </div>
 
@@ -215,34 +202,10 @@ export default function InvestmentTaskDetailsPage() {
 
             </section>
 
-            <div className="section-heading">
-                <div>
-                    <h2>Budżet</h2>
-
-                    <p>
-                        Plan finansowy i faktycznie
-                        zrealizowane płatności
-                        dla umów głównych.
-                    </p>
-                </div>
-            </div>
-
-            {budget ? (
-                <BudgetCard
-                    budget={budget}
-                />
-            ) : (
-                <section className="card empty-state">
-                    <h3>
-                        Brak budżetu
-                    </h3>
-
-                    <p>
-                        Dla tego zadania nie
-                        określono jeszcze budżetu.
-                    </p>
-                </section>
-            )}
+            <BudgetSection
+                key={taskId}
+                investmentTaskId={taskId}
+            />
 
             <div className="section-heading contracts-heading">
 

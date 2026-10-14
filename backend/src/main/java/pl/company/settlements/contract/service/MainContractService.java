@@ -15,6 +15,7 @@ import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contract.repository.specification.MainContractSpecification;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.repository.ContractorRepository;
+import pl.company.settlements.contractor.service.ContractorService;
 import pl.company.settlements.invoice.model.MainContractInvoicedAmount;
 import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository;
 import pl.company.settlements.payment.model.MainContractPaidAmount;
@@ -38,6 +39,7 @@ public class MainContractService {
     private final ContractorRepository contractorRepository;
     private final MainContractorInvoiceRepository mainContractorInvoiceRepository;
     private final PaymentAllocationRepository paymentAllocationRepository;
+    private final ContractorService contractorService;
 
     public MainContractResponse getById(
             Long id
@@ -163,18 +165,12 @@ public class MainContractService {
                                 + " does not exist"
                 ));
 
-        Contractor mainContractor = contractorRepository
-                .findById(request.getMainContractorId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Contractor with id "
-                                + request.getMainContractorId()
-                                + " does not exist"
-                ));
-
         validateDates(
                 request.getInitialStartDate(),
                 request.getInitialEndDate()
         );
+
+        Contractor mainContractor = resolveMainContractor(request);
 
         MainContract contract = new MainContract(
                 investmentTask,
@@ -252,6 +248,26 @@ public class MainContractService {
                                 + id
                                 + " does not exist"
                 ));
+    }
+
+    private Contractor resolveMainContractor(MainContractCreateRequest request) {
+        if (!request.isMainContractorSelectionValid()) {
+            throw new IllegalArgumentException(
+                    "Wskaż istniejącego wykonawcę albo podaj dane nowego wykonawcy."
+            );
+        }
+
+        if (request.getMainContractorId() != null) {
+            return contractorRepository.findById(request.getMainContractorId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Contractor with id " + request.getMainContractorId()
+                                    + " does not exist"
+                    ));
+        }
+
+        // REQUIRED dołącza do transakcji create(): wykonawca i umowa
+        // zatwierdzają się razem albo razem zostają wycofane.
+        return contractorService.createEntity(request.getNewMainContractor());
     }
 
     private void applyContractData(

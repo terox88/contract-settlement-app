@@ -81,7 +81,7 @@ export default function InvestmentTaskListPage() {
 
     return (
         <>
-            <div className="page-header">
+            <div className="page-header task-form-list-header">
                 <div>
                     <h1>Zadania inwestycyjne</h1>
 
@@ -90,6 +90,13 @@ export default function InvestmentTaskListPage() {
                         do umów i rozliczeń.
                     </p>
                 </div>
+
+                <Link
+                    to="/tasks/new"
+                    className="task-form-button task-form-button-primary"
+                >
+                    Dodaj zadanie
+                </Link>
             </div>
 
             <div className="task-filters">
