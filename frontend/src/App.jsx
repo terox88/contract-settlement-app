@@ -18,6 +18,9 @@ import './pages/InvestmentTaskFormPage.css';
 import MainContractDetailsPage
     from './pages/MainContractDetailsPage';
 
+import MainContractFormPage
+    from './pages/MainContractFormPage';
+
 export default function App() {
     return (
         <Routes>
@@ -57,6 +60,20 @@ export default function App() {
                 path="/tasks/:taskId"
                 element={
                     <InvestmentTaskDetailsPage />
+                }
+            />
+
+            <Route
+                path="/tasks/:taskId/main-contracts/new"
+                element={
+                    <MainContractFormPage />
+                }
+            />
+
+            <Route
+                path="/main-contracts/:contractId/edit"
+                element={
+                    <MainContractFormPage />
                 }
             />
 

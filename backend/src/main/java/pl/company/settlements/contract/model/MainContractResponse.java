@@ -43,6 +43,11 @@ public class MainContractResponse {
     private LocalDate currentEndDate;
 
     private ContractType contractType;
+
+    public String getContractTypeLabel() {
+        return contractType == null ? null : contractType.getStatus();
+    }
+
     private RemunerationType remunerationType;
 
     private String shortDescription;

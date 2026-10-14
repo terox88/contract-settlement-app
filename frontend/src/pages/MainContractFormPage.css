@@ -1,0 +1,58 @@
+.main-form-card { margin-top: 20px; }
+.main-form-heading { margin-bottom: 26px; }
+.main-form-heading h1 { margin: 0 0 10px; font-size: 26px; font-weight: 600; }
+.main-form-heading p, .main-form-hint { color: #6b7280; font-size: 14px; line-height: 1.5; }
+.main-form-heading p { margin: 6px 0 0; }
+.main-form-section { min-width: 0; margin: 0; padding: 0; border: 0; }
+.main-form-section + .main-form-section { margin-top: 28px; }
+.main-form-section legend { margin-bottom: 18px; padding: 0; font-size: 18px; font-weight: 600; }
+.main-form-assigned-contractor h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+.main-form-assigned-contractor p { margin: 6px 0 0; color: #374151; overflow-wrap: anywhere; }
+.main-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.main-form-field { display: flex; flex-direction: column; min-width: 0; gap: 8px; }
+.main-form-field-wide { grid-column: 1 / -1; }
+.main-form-field label { color: #374151; font-size: 14px; font-weight: 500; }
+.main-form-field input, .main-form-field select, .main-form-field textarea {
+    box-sizing: border-box; width: 100%; min-width: 0; padding: 11px 12px;
+    border: 1px solid #d1d5db; border-radius: 8px; background: white;
+    color: #1f2937; font: inherit; line-height: 1.5;
+}
+.main-form-field textarea { resize: vertical; min-height: 90px; }
+.main-form-field input:focus, .main-form-field select:focus, .main-form-field textarea:focus {
+    border-color: #6b7280; outline: 2px solid #dbeafe; outline-offset: 2px;
+}
+.main-form-field [aria-invalid="true"] { border-color: #b91c1c; }
+.main-form-field input:read-only, .main-form-section:disabled input,
+.main-form-section:disabled select, .main-form-section:disabled textarea { background: #f9fafb; color: #6b7280; }
+.main-form-field-error { margin: 0; color: #b91c1c; font-size: 13px; line-height: 1.5; }
+.main-form-nip { margin-bottom: 22px; }
+.main-form-nip > .main-form-field { max-width: 360px; }
+.main-form-lookup { margin-top: 10px; }
+.main-form-lookup p { margin: 0; font-size: 14px; line-height: 1.6; }
+.main-form-found {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    padding: 16px; border: 1px solid #bfdbfe; border-radius: 10px; background: #eff6ff;
+}
+.main-form-found strong { font-weight: 600; overflow-wrap: anywhere; }
+.main-form-found span { color: #6b7280; font-size: 13px; }
+.main-form-selected { color: #166534; }
+.main-form-alert { margin-bottom: 22px; overflow-wrap: anywhere; }
+.main-form-footer, .main-form-contract-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.main-form-footer { margin-top: 28px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+.main-form-button {
+    display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+    min-height: 42px; padding: 10px 16px; border: 1px solid #d1d5db; border-radius: 8px;
+    background: white; color: #374151; font: inherit; font-size: 14px;
+    font-weight: 500; line-height: 1.4; text-decoration: none; cursor: pointer;
+}
+.main-form-button:hover:not(:disabled) { background: #f3f4f6; }
+.main-form-button-primary { border-color: #1f2937; background: #1f2937; color: white; }
+.main-form-button-primary:hover:not(:disabled) { border-color: #111827; background: #111827; }
+.main-form-button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+.main-form-button:disabled { opacity: .6; cursor: not-allowed; }
+@media (max-width: 600px) {
+    .main-form-grid { grid-template-columns: 1fr; }
+    .main-form-card { padding: 20px; }
+    .main-form-heading h1 { font-size: 23px; }
+    .main-form-footer .main-form-button { flex: 1 1 auto; }
+}

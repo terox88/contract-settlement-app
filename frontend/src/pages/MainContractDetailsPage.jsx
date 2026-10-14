@@ -11,6 +11,8 @@ import {
 import http from '../api/http';
 
 import FinancialLimitsCard from '../FinancialLimitsCard';
+import { formatContractType } from '../utils/contractTypes';
+import './MainContractFormPage.css';
 
 const currencyFormatter =
     new Intl.NumberFormat(
@@ -26,14 +28,6 @@ const dateFormatter =
     new Intl.DateTimeFormat(
         'pl-PL'
     );
-
-const CONTRACT_TYPE_LABELS = {
-    SERVICE: 'Usługa',
-    DESIGN_AND_BUILD:
-        'Zaprojektuj i wybuduj',
-    CONSTRUCTION_WORKS:
-        'Roboty budowlane',
-};
 
 const REMUNERATION_TYPE_LABELS = {
     LUMP_SUM: 'Ryczałt',
@@ -156,11 +150,19 @@ export default function MainContractDetailsPage() {
 
                     </div>
 
-                    <span className="contract-type">
+                    <div className="main-form-contract-actions">
+                        <span className="contract-type">
             {formatContractType(
-                contract.contractType
+                contract
             )}
-          </span>
+                        </span>
+                        <Link
+                            to={`/main-contracts/${contract.id}/edit`}
+                            className="main-form-button"
+                        >
+                            Edytuj umowę
+                        </Link>
+                    </div>
 
                 </div>
 
@@ -471,14 +473,6 @@ function formatDate(value) {
         new Date(
             `${value}T00:00:00`
         )
-    );
-}
-
-function formatContractType(type) {
-    return (
-        CONTRACT_TYPE_LABELS[type]
-        ?? type
-        ?? '—'
     );
 }
 

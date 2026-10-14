@@ -10,6 +10,7 @@ import {
 
 import http from '../api/http';
 import BudgetSection from '../BudgetSection';
+import { formatContractType } from '../utils/contractTypes';
 
 const currencyFormatter =
     new Intl.NumberFormat(
@@ -26,18 +27,9 @@ const dateFormatter =
         'pl-PL'
     );
 
-const CONTRACT_TYPE_LABELS = {
-    SERVICE: 'Usługa',
-    DESIGN_AND_BUILD:
-        'Zaprojektuj i wybuduj',
-    CONSTRUCTION_WORKS:
-        'Roboty budowlane',
-    CONSTRUCTION:
-        'Roboty budowlane',
-};
-
 const REMUNERATION_TYPE_LABELS = {
     LUMP_SUM: 'Ryczałt',
+    UNIT_PRICE: 'Kosztorysowe',
     COST_ESTIMATE: 'Kosztorysowe',
     MEASURED: 'Obmiarowe',
 };
@@ -218,9 +210,15 @@ export default function InvestmentTaskDetailsPage() {
                     </p>
                 </div>
 
-                <span className="contracts-count">
-          {contracts.length}
-        </span>
+                <div className="task-form-actions">
+                    <span className="contracts-count">{contracts.length}</span>
+                    <Link
+                        to={`/tasks/${taskId}/main-contracts/new`}
+                        className="task-form-button task-form-button-primary"
+                    >
+                        Dodaj umowę główną
+                    </Link>
+                </div>
 
             </div>
 
@@ -294,7 +292,7 @@ function MainContractCard({
 
                 <div className="contract-type">
                     {formatContractType(
-                        contract.contractType
+                        contract
                     )}
                 </div>
 
@@ -434,14 +432,6 @@ function formatDate(value) {
         new Date(
             `${value}T00:00:00`
         )
-    );
-}
-
-function formatContractType(type) {
-    return (
-        CONTRACT_TYPE_LABELS[type]
-        ?? type
-        ?? '—'
     );
 }
 
