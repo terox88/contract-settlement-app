@@ -21,6 +21,7 @@ import pl.company.settlements.contract.repository.SubcontractRepository;
 import pl.company.settlements.contract.repository.specification.SubcontractSpecification;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.repository.ContractorRepository;
+import pl.company.settlements.contractor.service.ContractorService;
 import pl.company.settlements.invoice.model.SubcontractInvoicedAmount;
 import pl.company.settlements.invoice.repository.SubcontractorInvoiceRepository;
 import pl.company.settlements.payment.model.SubcontractPaymentAmounts;
@@ -47,6 +48,9 @@ public class SubcontractService {
 
     private final PaymentAllocationRepository
             paymentAllocationRepository;
+
+    private final ContractorService contractorService;
+    private final ContractHierarchyValidationService hierarchyValidationService;
 
     public SubcontractResponse getById(Long id) {
         Subcontract subcontract = findEntityById(id);
@@ -152,7 +156,7 @@ public class SubcontractService {
     ) {
         MainContract mainContract =
                 mainContractRepository
-                        .findById(request.getMainContractId())
+                        .findByIdForUpdate(request.getMainContractId())
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
                                         "Main contract with id "
@@ -161,21 +165,15 @@ public class SubcontractService {
                                 )
                         );
 
-        Contractor subcontractor =
-                contractorRepository
-                        .findById(request.getSubcontractorId())
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Contractor with id "
-                                                + request.getSubcontractorId()
-                                                + " does not exist"
-                                )
-                        );
-
         validateDates(
                 request.getInitialStartDate(),
                 request.getInitialEndDate()
         );
+
+        hierarchyValidationService.validateSubcontractCreate(mainContract, request);
+
+        Contractor subcontractor = resolveSubcontractor(request);
+        hierarchyValidationService.validateResolvedSubcontractor(mainContract, subcontractor);
 
         Subcontract subcontract =
                 new Subcontract(
@@ -224,12 +222,14 @@ public class SubcontractService {
             Long id,
             SubcontractUpdateRequest request
     ) {
-        Subcontract subcontract = findEntityById(id);
+        Subcontract subcontract = hierarchyValidationService.lockSubcontract(id);
 
         validateDates(
                 request.getInitialStartDate(),
                 request.getInitialEndDate()
         );
+
+        hierarchyValidationService.validateSubcontractUpdate(subcontract, request);
 
         applyContractData(
                 subcontract,
@@ -274,6 +274,22 @@ public class SubcontractService {
                 paidAmount,
                 deductedAmount
         );
+    }
+
+    private Contractor resolveSubcontractor(SubcontractCreateRequest request) {
+        if (!request.isSubcontractorSelectionValid()) {
+            throw new IllegalArgumentException(
+                    "Wskaż istniejącego podwykonawcę albo podaj dane nowego podwykonawcy."
+            );
+        }
+        if (request.getSubcontractorId() != null) {
+            return contractorRepository.findById(request.getSubcontractorId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Contractor with id " + request.getSubcontractorId() + " does not exist"
+                    ));
+        }
+        // Nowa firma dołącza do transakcji create(), tak jak umowa podwykonawcza.
+        return contractorService.createEntity(request.getNewSubcontractor());
     }
 
     private Subcontract findEntityById(Long id) {
@@ -477,6 +493,12 @@ public class SubcontractService {
                 .currentEndDate(
                         subcontract.getCurrentEndDate()
                 )
+
+                .mainContractEndDate(subcontract.getMainContract().getCurrentEndDate())
+                .exceedsMainContractEndDate(ContractHierarchyRules.exceedsMainContractEndDate(
+                        subcontract.getMainContract().getCurrentEndDate(), subcontract.getCurrentEndDate()))
+                .endDateOverriddenByAmendment(subcontract.getAmendments().stream()
+                        .anyMatch(amendment -> amendment.getNewEndDate() != null))
 
                 .contractType(
                         subcontract.getContractType()

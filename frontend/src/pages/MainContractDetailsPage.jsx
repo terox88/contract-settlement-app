@@ -12,6 +12,7 @@ import http from '../api/http';
 
 import FinancialLimitsCard from '../FinancialLimitsCard';
 import ContractAmendmentsCard from '../ContractAmendmentsCard';
+import SubcontractsCard from '../SubcontractsCard';
 import { formatContractType } from '../utils/contractTypes';
 import './MainContractFormPage.css';
 
@@ -342,6 +343,8 @@ export default function MainContractDetailsPage() {
 
             <ContractAmendmentsCard key={contract.id} contract={contract} />
 
+            <SubcontractsCard key={contract.id} contract={contract} />
+
             <div className="contract-sections-grid">
 
                 <FinancialLimitsCard contract={contract} />
@@ -357,13 +360,6 @@ export default function MainContractDetailsPage() {
                     title="Faktury GW"
                     description={
                         'Faktury generalnego wykonawcy i ich rozliczenie.'
-                    }
-                />
-
-                <SectionCard
-                    title="Podwykonawcy"
-                    description={
-                        'Umowy podwykonawcze związane z tą umową główną.'
                     }
                 />
 

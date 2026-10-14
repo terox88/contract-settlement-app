@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.contract.domain.ContractType;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.RemunerationType;
+import pl.company.settlements.contract.domain.Subcontract;
 import pl.company.settlements.contract.model.MainContractCreateRequest;
 import pl.company.settlements.contract.model.MainContractFilter;
 import pl.company.settlements.contract.model.MainContractResponse;
@@ -40,6 +41,7 @@ public class MainContractService {
     private final MainContractorInvoiceRepository mainContractorInvoiceRepository;
     private final PaymentAllocationRepository paymentAllocationRepository;
     private final ContractorService contractorService;
+    private final ContractHierarchyValidationService hierarchyValidationService;
 
     public MainContractResponse getById(
             Long id
@@ -204,12 +206,15 @@ public class MainContractService {
             Long id,
             MainContractUpdateRequest request
     ) {
-        MainContract contract = findEntityById(id);
+        MainContract contract = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("Main contract with id " + id + " does not exist"));
 
         validateDates(
                 request.getInitialStartDate(),
                 request.getInitialEndDate()
         );
+
+        hierarchyValidationService.validateMainContractUpdate(contract, request);
 
         applyContractData(
                 contract,
@@ -329,6 +334,10 @@ public class MainContractService {
         BigDecimal currentValue =
                 contract.getCurrentValue();
 
+        BigDecimal subcontractsTotalValue = contract.getSubcontracts().stream()
+                .map(Subcontract::getCurrentValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal remainingToInvoice =
                 currentValue.subtract(
                         invoicedAmount
@@ -372,6 +381,9 @@ public class MainContractService {
                 .currentValue(
                         currentValue
                 )
+
+                .subcontractsTotalValue(subcontractsTotalValue)
+                .remainingForSubcontracts(currentValue.subtract(subcontractsTotalValue))
 
                 .invoicedAmount(
                         invoicedAmount

@@ -24,6 +24,7 @@ public class ContractAmendmentService {
 
     private final ContractAmendmentRepository amendmentRepository;
     private final ContractRepository contractRepository;
+    private final ContractHierarchyValidationService hierarchyValidationService;
 
     public ContractAmendmentResponse getById(Long id) {
         return toResponse(
@@ -55,13 +56,7 @@ public class ContractAmendmentService {
     public ContractAmendmentResponse create(
             ContractAmendmentCreateRequest request
     ) {
-        Contract contract = contractRepository
-                .findById(request.getContractId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Contract with id "
-                                + request.getContractId()
-                                + " does not exist"
-                ));
+        Contract contract = hierarchyValidationService.lockContract(request.getContractId());
 
         validateDates(
                 contract,
@@ -82,6 +77,9 @@ public class ContractAmendmentService {
                 request.getEffectiveDate(),
                 request.getValueChange()
         );
+
+        hierarchyValidationService.validateAmendment(contract, null, request.getEffectiveDate(),
+                request.getValueChange(), request.getNewEndDate());
 
         ContractAmendment amendment =
                 new ContractAmendment(contract);
@@ -107,11 +105,10 @@ public class ContractAmendmentService {
             Long id,
             ContractAmendmentUpdateRequest request
     ) {
-        ContractAmendment amendment =
-                findEntityById(id);
-
-        Contract contract =
-                amendment.getContract();
+        Long contractId = amendmentRepository.findContractIdById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Contract amendment with id " + id + " does not exist"));
+        Contract contract = hierarchyValidationService.lockContract(contractId);
+        ContractAmendment amendment = findEntityById(id);
 
         validateDates(
                 contract,
@@ -132,6 +129,9 @@ public class ContractAmendmentService {
                 request.getEffectiveDate(),
                 request.getValueChange()
         );
+
+        hierarchyValidationService.validateAmendment(contract, id, request.getEffectiveDate(),
+                request.getValueChange(), request.getNewEndDate());
 
         applyData(
                 amendment,

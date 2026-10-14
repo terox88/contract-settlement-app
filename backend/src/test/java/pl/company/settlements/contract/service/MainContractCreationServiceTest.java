@@ -37,6 +37,7 @@ class MainContractCreationServiceTest {
     @Mock private MainContractorInvoiceRepository mainContractorInvoiceRepository;
     @Mock private PaymentAllocationRepository paymentAllocationRepository;
     @Mock private ContractorService contractorService;
+    @Mock private ContractHierarchyValidationService hierarchyValidationService;
     @InjectMocks private MainContractService service;
 
     private InvestmentTask task;
@@ -71,6 +72,8 @@ class MainContractCreationServiceTest {
         assertSame(existing, captor.getValue().getMainContractor());
         assertEquals("UM/2026/01", captor.getValue().getContractNumber());
         assertEquals(3L, response.getMainContractorId());
+        assertEquals(BigDecimal.ZERO, response.getSubcontractsTotalValue());
+        assertEquals(new BigDecimal("100.00"), response.getRemainingForSubcontracts());
         verifyNoInteractions(contractorService);
         verify(contractorRepository, never()).save(any());
     }

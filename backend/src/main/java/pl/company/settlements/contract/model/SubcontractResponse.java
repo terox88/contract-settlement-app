@@ -37,6 +37,10 @@ public class SubcontractResponse {
     private LocalDate currentStartDate;
     private LocalDate currentEndDate;
 
+    private LocalDate mainContractEndDate;
+    private boolean exceedsMainContractEndDate;
+    private boolean endDateOverriddenByAmendment;
+
     private ContractType contractType;
 
     public String getContractTypeLabel() {

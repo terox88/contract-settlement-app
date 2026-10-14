@@ -1,0 +1,30 @@
+.subcontracts-card { margin-top: 32px; }
+.subcontracts-heading, .subcontracts-item-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.subcontracts-heading { margin-bottom: 22px; }
+.subcontracts-heading h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
+.subcontracts-heading p, .subcontracts-muted { margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; }
+.subcontracts-heading .main-form-button, .subcontracts-item-heading .main-form-button { flex-shrink: 0; }
+.subcontracts-list { display: grid; gap: 18px; }
+.subcontracts-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 20px; margin: 0; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; }
+.subcontracts-summary dt { color: #6b7280; font-size: 13px; line-height: 1.5; }
+.subcontracts-summary dd { margin: 8px 0 0; font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.subcontracts-summary-note { margin: 12px 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; }
+.subcontracts-end-warning { margin: 18px 0; padding: 14px 16px; border: 1px solid #fcd34d; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 14px; line-height: 1.6; }
+.subcontracts-item { padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px; min-width: 0; }
+.subcontracts-number { color: #6b7280; font-size: 13px; font-weight: 500; }
+.subcontracts-item h3 { margin: 7px 0; font-size: 19px; font-weight: 600; overflow-wrap: anywhere; }
+.subcontracts-description { color: #4b5563; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.subcontracts-meta, .subcontracts-financials { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 22px 0 0; }
+.subcontracts-meta dt, .subcontracts-financials dt { color: #6b7280; font-size: 13px; line-height: 1.5; }
+.subcontracts-meta dd, .subcontracts-financials dd { margin: 6px 0 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.subcontracts-financials { padding: 16px; background: #f9fafb; border-radius: 8px; }
+.subcontracts-deductions { margin-top: 22px; padding-top: 18px; border-top: 1px solid #e5e7eb; }
+.subcontracts-deductions h4 { margin: 0; font-size: 15px; font-weight: 600; }
+.subcontracts-deductions .subcontracts-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; }
+.subcontracts-deductions p { margin-top: 14px; }
+@media (max-width: 800px) { .subcontracts-meta, .subcontracts-financials { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+    .subcontracts-heading, .subcontracts-item-heading { flex-direction: column; }
+    .subcontracts-meta, .subcontracts-financials, .subcontracts-deductions .subcontracts-meta { grid-template-columns: 1fr; }
+    .subcontracts-summary { grid-template-columns: 1fr; }
+}

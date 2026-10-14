@@ -27,6 +27,9 @@ public class MainContractResponse {
     private BigDecimal initialValue;
     private BigDecimal currentValue;
 
+    private BigDecimal subcontractsTotalValue;
+    private BigDecimal remainingForSubcontracts;
+
     private BigDecimal invoicedAmount;
     private BigDecimal remainingToInvoice;
 
