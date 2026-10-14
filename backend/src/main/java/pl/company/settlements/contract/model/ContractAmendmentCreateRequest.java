@@ -1,5 +1,6 @@
 package pl.company.settlements.contract.model;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -26,6 +27,7 @@ public class ContractAmendmentCreateRequest {
     @NotNull
     private LocalDate effectiveDate;
 
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal valueChange;
 
     private LocalDate newEndDate;

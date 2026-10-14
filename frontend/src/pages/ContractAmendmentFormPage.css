@@ -1,0 +1,8 @@
+.amendment-field-hint { margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; }
+.amendment-preview { margin-top: 28px; padding: 20px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; }
+.amendment-preview h2 { margin: 0 0 18px; font-size: 18px; font-weight: 600; }
+.amendment-preview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 0; }
+.amendment-preview dt { color: #6b7280; font-size: 13px; line-height: 1.5; }
+.amendment-preview dd { margin: 6px 0 0; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.amendment-preview p { margin: 18px 0 0; color: #6b7280; font-size: 13px; line-height: 1.6; }
+@media (max-width: 600px) { .amendment-preview dl { grid-template-columns: 1fr; } }

@@ -1,0 +1,21 @@
+.amendments-card { margin-top: 32px; }
+.amendments-heading, .amendments-item-heading {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 18px;
+}
+.amendments-heading { margin-bottom: 20px; }
+.amendments-heading h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
+.amendments-heading p, .amendments-muted { margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6; }
+.amendments-heading .main-form-button, .amendments-item-heading .main-form-button { flex-shrink: 0; }
+.amendments-list { display: grid; gap: 14px; }
+.amendments-item { padding: 18px; border: 1px solid #e5e7eb; border-radius: 10px; min-width: 0; }
+.amendments-item-heading { align-items: center; }
+.amendments-item-heading h3 { margin: 0; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.amendments-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 18px 0 0; }
+.amendments-meta dt { color: #6b7280; font-size: 13px; line-height: 1.5; }
+.amendments-meta dd { margin: 6px 0 0; color: #1f2937; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.amendments-description { margin: 18px 0 0; color: #4b5563; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 800px) { .amendments-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 500px) {
+    .amendments-heading { flex-direction: column; }
+    .amendments-meta { grid-template-columns: 1fr; gap: 14px; }
+}

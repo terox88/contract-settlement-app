@@ -11,6 +11,7 @@ import {
 import http from '../api/http';
 
 import FinancialLimitsCard from '../FinancialLimitsCard';
+import ContractAmendmentsCard from '../ContractAmendmentsCard';
 import { formatContractType } from '../utils/contractTypes';
 import './MainContractFormPage.css';
 
@@ -339,14 +340,9 @@ export default function MainContractDetailsPage() {
 
             </section>
 
-            <div className="contract-sections-grid">
+            <ContractAmendmentsCard key={contract.id} contract={contract} />
 
-                <SectionCard
-                    title="Aneksy"
-                    description={
-                        'Zmiany wartości i terminów umowy.'
-                    }
-                />
+            <div className="contract-sections-grid">
 
                 <FinancialLimitsCard contract={contract} />
 
