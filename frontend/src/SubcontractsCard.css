@@ -4,6 +4,7 @@
 .subcontracts-heading h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
 .subcontracts-heading p, .subcontracts-muted { margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; }
 .subcontracts-heading .main-form-button, .subcontracts-item-heading .main-form-button { flex-shrink: 0; }
+.subcontracts-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .subcontracts-list { display: grid; gap: 18px; }
 .subcontracts-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 20px; margin: 0; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; }
 .subcontracts-summary dt { color: #6b7280; font-size: 13px; line-height: 1.5; }

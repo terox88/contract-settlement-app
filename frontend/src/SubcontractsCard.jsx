@@ -72,9 +72,14 @@ export default function SubcontractsCard({ contract }) {
                                     <h3>{subcontract.subcontractorName}</h3>
                                     <p className="subcontracts-muted">NIP: {subcontract.subcontractorTaxId}</p>
                                 </div>
-                                <Link to={`/main-contracts/${contractId}/subcontracts/${subcontract.id}/edit`} className="main-form-button">
-                                    Edytuj umowę
-                                </Link>
+                                <div className="subcontracts-actions">
+                                    <Link to={`/main-contracts/${contractId}/subcontracts/${subcontract.id}/invoices`} className="main-form-button">
+                                        Faktury
+                                    </Link>
+                                    <Link to={`/main-contracts/${contractId}/subcontracts/${subcontract.id}/edit`} className="main-form-button">
+                                        Edytuj umowę
+                                    </Link>
+                                </div>
                             </div>
                             {getSubcontractEndWarning(summaryContract.currentEndDate, subcontract.currentEndDate) &&
                                 <p className="subcontracts-end-warning" role="status">

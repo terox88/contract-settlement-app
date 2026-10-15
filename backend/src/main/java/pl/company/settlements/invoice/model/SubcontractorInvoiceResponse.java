@@ -13,6 +13,10 @@ public class SubcontractorInvoiceResponse {
 
     private Long id;
 
+    private InvoiceDocumentSummary documents;
+    private boolean editable;
+    private String editBlockedReason;
+
     /*
      * Contract context
      */

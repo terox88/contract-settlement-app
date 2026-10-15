@@ -30,6 +30,7 @@ public class SubcontractorInvoiceService {
 
     private final SubcontractorInvoiceRepository repository;
     private final SubcontractRepository subcontractRepository;
+    private final InvoiceDocumentService invoiceDocumentService;
     private final PaymentAllocationRepository
             paymentAllocationRepository;
 
@@ -108,6 +109,8 @@ public class SubcontractorInvoiceService {
                                 )
                         );
 
+        Map<Long, InvoiceDocumentState> documents = invoiceDocumentService.read(invoiceIds);
+
         return invoices.stream()
                 .map(invoice -> {
 
@@ -136,7 +139,8 @@ public class SubcontractorInvoiceService {
                             invoice,
                             paidAmount,
                             deductedAmount,
-                            assignedAmount
+                            assignedAmount,
+                            documents.get(invoice.getId())
                     );
                 })
                 .toList();
@@ -195,7 +199,8 @@ public class SubcontractorInvoiceService {
                 savedInvoice,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                BigDecimal.ZERO
+                BigDecimal.ZERO,
+                new InvoiceDocumentState()
         );
     }
 
@@ -214,7 +219,7 @@ public class SubcontractorInvoiceService {
 
         if (!invoice.getPaymentAllocations().isEmpty()) {
             throw new IllegalStateException(
-                    "Cannot edit invoice that has payment allocations."
+                    "Faktura ma przypisane płatności lub potrącenia. Nie można zmieniać jej danych."
             );
         }
 
@@ -272,7 +277,8 @@ public class SubcontractorInvoiceService {
             SubcontractorInvoice invoice,
             BigDecimal paidAmount,
             BigDecimal deductedAmount,
-            BigDecimal assignedToMainInvoicesAmount
+            BigDecimal assignedToMainInvoicesAmount,
+            InvoiceDocumentState documentState
     ) {
         BigDecimal remainingAmount =
                 invoice.getGrossAmount()
@@ -317,6 +323,11 @@ public class SubcontractorInvoiceService {
                 hasStatement && !settled;
 
         return SubcontractorInvoiceResponse.builder()
+                .documents(documentState.summary())
+                .editable(!documentState.hasPaymentAllocations())
+                .editBlockedReason(documentState.hasPaymentAllocations()
+                        ? "Faktura ma przypisane płatności lub potrącenia. Edycja danych faktury jest zablokowana."
+                        : null)
                 .id(
                         invoice.getId()
                 )
@@ -467,7 +478,7 @@ public class SubcontractorInvoiceService {
 
         if (calculatedGross.compareTo(grossAmount) != 0) {
             throw new IllegalArgumentException(
-                    "Gross amount must equal net amount plus VAT amount."
+                    "Kwota brutto musi być równa sumie kwot netto i VAT."
             );
         }
     }
@@ -497,7 +508,8 @@ public class SubcontractorInvoiceService {
                 invoice,
                 paidAmount,
                 deductedAmount,
-                assignedAmount
+                assignedAmount,
+                invoiceDocumentService.read(List.of(invoice.getId())).get(invoice.getId())
         );
     }
 

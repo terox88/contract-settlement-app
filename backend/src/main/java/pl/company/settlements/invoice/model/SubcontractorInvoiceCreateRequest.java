@@ -1,6 +1,9 @@
 package pl.company.settlements.invoice.model;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -22,6 +25,7 @@ public class SubcontractorInvoiceCreateRequest {
     private Long subcontractId;
 
     @NotBlank
+    @Size(max = 255)
     private String invoiceNumber;
 
     @NotNull
@@ -33,22 +37,27 @@ public class SubcontractorInvoiceCreateRequest {
 
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal netAmount;
 
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal vatAmount;
 
     @NotNull
     @Positive
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal grossAmount;
 
     @NotBlank
+    @Pattern(regexp = "[A-Za-z]{3}")
     private String currency = "PLN";
 
     @NotEmpty
-    private List<String> vatRates =
+    private List<@NotBlank @Size(max = 20) String> vatRates =
             new ArrayList<>();
 
+    @Size(max = 1000)
     private String description;
 }
