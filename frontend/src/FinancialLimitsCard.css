@@ -57,3 +57,5 @@
   .finlim__form-row { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) { .finlim { padding: 17px; } }
+
+.finlim__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

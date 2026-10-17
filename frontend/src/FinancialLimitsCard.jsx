@@ -1,40 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import http from './api/http';
+import { parseBudgetAmount, formatBudgetCents, isMissingBudget } from './utils/budgetForm';
+import { buildFinancialLimitRequest, hasFinancialLimitPlan, validateFinancialLimitPlan } from './utils/financialLimitForm';
 import './FinancialLimitsCard.css';
 
-const formatter = new Intl.NumberFormat('pl-PL', {
-  style: 'currency',
-  currency: 'PLN',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-// Work in integer grosze to avoid floating-point errors when comparing amounts.
-function cents(value) {
-  if (value === null || value === undefined) return null;
-  const normalized = String(value)
-    .replace(/[\s\u00a0\u202f]/g, '')
-    .replace(',', '.');
-  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(normalized);
-  if (!match) return null;
-  const amount = Number(match[1]) * 100 + Number((match[2] || '').padEnd(2, '0'));
-  return Number.isSafeInteger(amount) ? amount : null;
-}
-
-function money(value) {
-  const amount = cents(value);
-  return amount === null ? '—' : formatter.format(amount / 100);
-}
-
-function fromCents(amount) {
-  return (amount / 100).toFixed(2);
-}
+function cents(value) { return parseBudgetAmount(value)?.cents ?? null; }
+function money(value) { return formatBudgetCents(cents(value)); }
+function fromCents(amount) { return `${amount / 100n}.${String(amount % 100n).padStart(2, '0')}`; }
 
 function defaultRow(contract) {
   return {
     key: 'initial',
     year: String(contract.contractDate?.slice(0, 4) || new Date().getFullYear()),
-    amount: fromCents(cents(contract.currentValue) ?? 0),
+    amount: fromCents(cents(contract.currentValue) ?? 0n),
     original: false,
   };
 }
@@ -53,6 +31,7 @@ function errorMessage(error) {
   if (typeof data === 'string' && data.trim()) return data;
   if (data?.message) return data.message;
   if (data?.detail) return data.detail;
+  if (error?.message) return error.message;
   return 'Wystąpił błąd komunikacji z serwerem. Spróbuj ponownie.';
 }
 
@@ -77,6 +56,11 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [reload, setReload] = useState(0);
+  const [loadError, setLoadError] = useState('');
+  const savingRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  const hasPlan = hasFinancialLimitPlan(limit);
 
   const contractId = contract?.id;
   const investmentTaskId = contract?.investmentTaskId;
@@ -89,57 +73,64 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
       return;
     }
     let active = true;
+    const controller = new AbortController();
     setLoading(true);
-    setError('');
+    setLoadError('');
 
     async function load() {
       try {
         const [limitResult, budgetResult] = await Promise.all([
-          http.get(`/financial-limits/main-contract/${contractId}`)
+          http.get(`/financial-limits/main-contract/${contractId}`, { signal: controller.signal })
             .then((response) => response.data)
             .catch((err) => {
               if (isMissingLimit(err)) return null;
               throw err;
             }),
-          http.get(`/budgets/investment-task/${investmentTaskId}`)
+          http.get(`/budgets/investment-task/${investmentTaskId}`, { signal: controller.signal })
             .then((response) => response.data)
             .catch((err) => {
-              if (err?.response?.status === 404) return null;
+              if (isMissingBudget(err, investmentTaskId)) return null;
               throw err;
             }),
         ]);
         if (!active) return;
+        if (limitResult && (String(limitResult.mainContractId) !== String(contractId) || !Array.isArray(limitResult.years))) {
+          throw new Error('Nieprawidłowa odpowiedź z limitami tej umowy.');
+        }
+        if (budgetResult && (String(budgetResult.investmentTaskId) !== String(investmentTaskId) || !Array.isArray(budgetResult.years))) {
+          throw new Error('Nieprawidłowa odpowiedź z budżetem zadania.');
+        }
         setLimit(limitResult);
         setBudget(budgetResult);
       } catch (err) {
-        if (active) setError(`Nie można pobrać limitów: ${errorMessage(err)}`);
+        if (active) setLoadError(`Nie można pobrać limitów: ${errorMessage(err)}`);
       } finally {
         if (active) setLoading(false);
       }
     }
 
     load();
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [contractId, investmentTaskId, reload]);
 
   const displayedYears = useMemo(() => {
-    if (limit) return [...(limit.years ?? [])].sort((a, b) => a.year - b.year);
+    if (hasPlan) return [...limit.years].sort((a, b) => a.year - b.year);
     if (!Number.isInteger(contractYear)) return [];
     return [{ year: contractYear, amount: contract.currentValue }];
-  }, [limit, contractYear, contract?.currentValue]);
+  }, [limit, hasPlan, contractYear, contract?.currentValue]);
 
-  const totalLimitCents = limit
-    ? (limit.years ?? []).reduce((total, year) => total + (cents(year.amount) ?? 0), 0)
+  const totalLimitCents = hasPlan
+    ? limit.years.reduce((total, year) => total + (cents(year.amount) ?? 0n), 0n)
     : currentValueCents;
 
   function startEditing() {
     setError('');
     setNotice('');
-    const nextRows = limit
-      ? (limit.years ?? []).map((year) => ({
+    const nextRows = hasPlan
+      ? limit.years.map((year) => ({
           key: `existing-${year.year}`,
           year: String(year.year),
-          amount: fromCents(cents(year.amount) ?? 0),
+          amount: cents(year.amount) === null ? String(year.amount ?? '') : fromCents(cents(year.amount)),
           original: true,
         }))
       : [defaultRow(contract)];
@@ -152,83 +143,31 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
     setError('');
   }
 
-  function validate() {
-    if (!budget) return 'Zadanie nie ma zdefiniowanego budżetu rocznego. Najpierw uzupełnij budżet.';
-    if (currentValueCents === null) return 'Nie można odczytać aktualnej wartości umowy.';
-    if (rows.length === 0) return 'Dodaj co najmniej jeden rok limitu.';
-
-    const proposed = new Map();
-    let totalCents = 0;
-    for (const row of rows) {
-      const year = Number(row.year);
-      const amountCents = cents(row.amount);
-      if (!Number.isInteger(year) || year < 2000 || year > 2200) {
-        return 'Podaj poprawny rok (2000–2200).';
-      }
-      if (proposed.has(year)) return `Rok ${year} został podany więcej niż raz.`;
-      if (amountCents === null) return `Podaj poprawną, nieujemną kwotę dla roku ${year} (maksymalnie 2 miejsca po przecinku).`;
-      proposed.set(year, amountCents);
-      totalCents += amountCents;
-    }
-    if (totalCents !== currentValueCents) {
-      return `Suma limitów musi być równa aktualnej wartości umowy (${money(contract.currentValue)}).`;
-    }
-
-    const original = new Map();
-    if (limit) {
-      for (const year of limit.years ?? []) original.set(Number(year.year), cents(year.amount) ?? 0);
-    } else if (Number.isInteger(contractYear)) {
-      original.set(contractYear, currentValueCents);
-    }
-
-    const budgetYears = new Map((budget.years ?? []).map((year) => [Number(year.year), year]));
-    for (const [year, newAmount] of proposed) {
-      const budgetYear = budgetYears.get(year);
-      if (!budgetYear) return `Brak budżetu zadania na rok ${year}. Najpierw dodaj rok do budżetu.`;
-      const available = cents(budgetYear.availableAmount);
-      if (available === null) return `Brak informacji o wolnych środkach w roku ${year}.`;
-      // Current free budget already includes this contract's OLD commitment.
-      const capacity = available + (original.get(year) ?? 0);
-      if (newAmount > capacity) {
-        return `Za mało wolnych środków na ${year}. Maksymalny limit tej umowy przy obecnym budżecie: ${formatter.format(Math.max(0, capacity) / 100)}.`;
-      }
-    }
-    return null;
-  }
+  const validation = validateFinancialLimitPlan(contract, limit, budget, rows);
 
   async function handleSave(event) {
     event.preventDefault();
-    if (saving) return;
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setSaving(true);
-    setError('');
-    setNotice('');
-    const prepared = rows.map((row) => ({
-      year: Number(row.year),
-      amount: cents(row.amount) / 100,
-    }));
-
+    if (savingRef.current || loading || loadError) return;
+    const check = validateFinancialLimitPlan(contract, limit, budget, rows);
+    if (check.error) { setError(check.error); return; }
+    savingRef.current = true;
+    setSaving(true); setError(''); setNotice('');
+    let saved = false;
     try {
-      // One request: all years are saved atomically by Spring Boot.
-      await http.put(`/financial-limits/main-contract/${contractId}/plan`, {
-        years: prepared,
-      });
+      const request = buildFinancialLimitRequest(contract, limit, budget, rows);
+      await http[request.method](request.url, request.data);
+      saved = true;
+    } catch (err) {
+      if (mountedRef.current) setError(`Nie udało się zapisać planu finansowego: ${errorMessage(err)}`);
+    } finally {
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
+    }
+    if (saved && mountedRef.current) {
       setEditing(false);
       setNotice('Limity finansowe zostały zapisane.');
       setReload((value) => value + 1);
       onChanged?.();
-    } catch (err) {
-      setEditing(false);
-      setError(`Nie udało się zapisać planu finansowego: ${errorMessage(err)}. Żadna zmiana z tego żądania nie została zapisana.`);
-      setReload((value) => value + 1);
-      onChanged?.();
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -240,16 +179,19 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
           <h3>Limity finansowe</h3>
           <p>Podział zaangażowania umowy na lata budżetowe.</p>
         </div>
-        {!editing && !loading && !error && (
-          <button type="button" className="finlim__button finlim__button--primary" onClick={startEditing}>
-            {limit ? 'Edytuj limity' : 'Ustal limity'}
-          </button>
-        )}
+        {!loading && !loadError && <div className="finlim__actions">
+          {!editing && <button type="button" className="finlim__button finlim__button--primary" onClick={startEditing}>
+            {hasPlan ? 'Edytuj limity' : 'Ustal limity'}
+          </button>}
+          <button type="button" className="finlim__button" disabled={saving} onClick={() => { setError(''); setReload((value) => value + 1); }}>Odśwież</button>
+        </div>}
       </div>
 
       {loading ? (
         <p className="finlim__muted">Wczytywanie limitów finansowych…</p>
-      ) : (
+      ) : loadError ? <div className="finlim__alert" role="alert">{loadError}
+        <button type="button" className="finlim__button" onClick={() => setReload((value) => value + 1)}>Spróbuj ponownie</button>
+      </div> : (
         <>
           {error && <div className="finlim__alert" role="alert">{error}</div>}
           {notice && <div className="finlim__notice" role="status">{notice}</div>}
@@ -261,13 +203,13 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
                   <strong>{money(contract.currentValue)}</strong>
                 </div>
                 <div>
-                  <span>{limit ? 'Suma limitów' : 'Zaangażowanie'}</span>
-                  <strong>{money((totalLimitCents ?? 0) / 100)}</strong>
+                  <span>{hasPlan ? 'Suma limitów' : 'Zaangażowanie'}</span>
+                  <strong>{formatBudgetCents(totalLimitCents)}</strong>
                 </div>
               </div>
-              {!limit && (
+              {!hasPlan && (
                 <p className="finlim__hint">
-                  Umowa roczna
+                  Bez podziału na lata cała wartość umowy obciąża rok jej zawarcia. Ustal limity, aby rozłożyć zaangażowanie na lata budżetowe.
                 </p>
               )}
               <div className="finlim__year-list">
@@ -278,7 +220,7 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
                   </div>
                 ))}
               </div>
-              {limit && totalLimitCents !== currentValueCents && (
+              {hasPlan && totalLimitCents !== currentValueCents && (
                 <div className="finlim__alert" role="alert">
                   Suma limitów różni się od aktualnej wartości umowy. Sprawdź podział finansowania po aneksach.
                 </div>
@@ -291,6 +233,9 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
               <p className="finlim__hint">
                 Suma limitów powinna odpowiadać aktualnej wartości umowy. Aby wycofać istniejący rok, ustaw jego kwotę na 0 zł.
               </p>
+              {validation.uncheckedYears.length > 0 && !validation.error && <p className="finlim__hint">
+                Dostępność środków w latach {validation.uncheckedYears.join(', ')} zostanie sprawdzona przy zapisie.
+              </p>}
               <div className="finlim__form-rows">
                 {rows.map((row) => (
                   <div className="finlim__form-row" key={row.key}>
