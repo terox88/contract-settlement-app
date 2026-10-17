@@ -1,5 +1,8 @@
 package pl.company.settlements.payment.repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +20,10 @@ import java.util.List;
 
 public interface PaymentAllocationRepository
         extends JpaRepository<PaymentAllocation, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from PaymentAllocation a where a.id = :id")
+    Optional<PaymentAllocation> findByIdForUpdate(@Param("id") Long id);
+
 
     /** Annual payment totals are derived from the actual payment date. */
     @Query("""
@@ -37,6 +44,8 @@ public interface PaymentAllocationRepository
     );
 
     boolean existsByPayment_Id(Long paymentId);
+
+    long countByPayment_Id(Long paymentId);
 
     List<PaymentAllocation>
     findAllByPayment_IdOrderByIdAsc(

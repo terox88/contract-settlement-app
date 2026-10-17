@@ -17,6 +17,7 @@ import pl.company.settlements.contractor.model.ContractorCreateRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -61,6 +62,10 @@ public class MainContractCreateRequest {
 
     @Size(max = 500)
     private String shortDescription;
+
+    /** Opcjonalne dla dotychczasowych klientów API; nowy formularz przesyła pełny plan. */
+    @Size(min = 1, max = 201)
+    private List<@NotNull @Valid FinancialLimitYearRequest> financialLimitYears;
 
     @AssertTrue(message = "Wskaż istniejącego wykonawcę albo podaj dane nowego wykonawcy.")
     public boolean isMainContractorSelectionValid() {

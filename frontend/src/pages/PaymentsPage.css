@@ -1,0 +1,8 @@
+@import './MainInvoiceSettlementPage.css';
+
+.payment-picker legend { font-size: 15px; font-weight: 600; margin: 8px 0; }
+.payment-allocation-row { padding: 18px; margin: 16px 0; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; }
+.payment-allocation-row h3 { margin: 0 0 10px; font-size: 16px; }
+.payment-allocation-row .main-form-grid { margin-top: 14px; }
+.payment-row-actions { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
+.payment-reference { overflow-wrap: anywhere; white-space: pre-wrap; }

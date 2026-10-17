@@ -38,7 +38,7 @@ export function annualAvailableCents(budget, row) {
     return null;
 }
 
-export function validateFinancialLimitPlan(contract, limit, budget, rows) {
+export function validateFinancialLimitPlan(contract, limit, budget, rows, { newContract = false } = {}) {
     const result = { error: null, years: [], uncheckedYears: [] };
     const fail = (message) => ({ ...result, error: message });
     if (!budget) return fail('Zadanie nie ma zdefiniowanego budżetu rocznego. Najpierw uzupełnij budżet.');
@@ -61,7 +61,7 @@ export function validateFinancialLimitPlan(contract, limit, budget, rows) {
         result.years.push({ year, amount: amount.amount });
     }
     if (total !== current.cents) return fail(`Suma limitów musi być równa aktualnej wartości umowy (${formatBudgetCents(current.cents)}).`);
-    const before = originalCommitments(contract, limit);
+    const before = newContract ? new Map() : originalCommitments(contract, limit);
     if (!before) return fail('Nie można odczytać dotychczasowego zaangażowania umowy. Odśwież dane.');
     const budgetYears = new Map(budget.years.map((row) => [Number(row.year), row]));
     for (const [year, amount] of proposed) {
@@ -79,6 +79,10 @@ export function validateFinancialLimitPlan(contract, limit, budget, rows) {
         }
     }
     return result;
+}
+
+export function validateInitialFinancialLimits(contract, budget, rows) {
+    return validateFinancialLimitPlan({ ...contract, currentValue: contract.initialValue }, null, budget, rows, { newContract: true });
 }
 
 export function buildFinancialLimitRequest(contract, limit, budget, rows) {

@@ -16,6 +16,8 @@ import pl.company.settlements.payment.model.PaymentCreateRequest;
 import pl.company.settlements.payment.model.PaymentResponse;
 import pl.company.settlements.payment.model.PaymentUpdateRequest;
 import pl.company.settlements.payment.service.PaymentService;
+import pl.company.settlements.payment.service.PaymentWorkflowService;
+import pl.company.settlements.payment.model.PaymentWithAllocationsRequest;
 
 import java.util.List;
 
@@ -25,6 +27,7 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService service;
+    private final PaymentWorkflowService workflowService;
 
     @GetMapping("/{id}")
     public PaymentResponse getById(
@@ -45,6 +48,12 @@ public class PaymentController {
             @RequestBody PaymentCreateRequest request
     ) {
         return service.create(request);
+    }
+
+    @PostMapping("/with-allocations")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PaymentResponse createWithAllocations(@Valid @RequestBody PaymentWithAllocationsRequest request) {
+        return workflowService.create(request);
     }
 
     @PutMapping("/{id}")

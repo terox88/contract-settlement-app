@@ -84,6 +84,7 @@ export default function InvestmentTaskListPage() {
             <div className="page-header task-form-list-header">
                 <div>
                     <h1>Zadania inwestycyjne</h1>
+                    <Link to="/payments" className="main-form-button">Przelewy i rozliczenia</Link>
 
                     <p>
                         Wybierz zadanie, aby przejść

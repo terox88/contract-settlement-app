@@ -133,7 +133,7 @@ public class PaymentAllocationService {
 
         Payment payment =
                 paymentRepository
-                        .findById(
+                        .findByIdForUpdate(
                                 request.getPaymentId()
                         )
                         .orElseThrow(() ->
@@ -161,7 +161,7 @@ public class PaymentAllocationService {
 
             SubcontractorInvoice invoice =
                     subcontractorInvoiceRepository
-                            .findById(
+                            .findByIdForUpdate(
                                     request.getSubcontractorInvoiceId()
                             )
                             .orElseThrow(() ->
@@ -193,7 +193,7 @@ public class PaymentAllocationService {
 
             MainContractorInvoice invoice =
                     mainContractorInvoiceRepository
-                            .findById(
+                            .findByIdForUpdate(
                                     request.getMainContractorInvoiceId()
                             )
                             .orElseThrow(() ->
@@ -219,8 +219,8 @@ public class PaymentAllocationService {
                     .compareTo(BigDecimal.ZERO) != 0) {
 
                 throw new IllegalArgumentException(
-                        "Deducted amount must be zero "
-                                + "for main contractor invoice allocation"
+                        "Potrącenie musi wynosić zero "
+                                + "przy rozliczeniu faktury GW."
                 );
             }
 
@@ -254,15 +254,19 @@ public class PaymentAllocationService {
     ) {
 
         PaymentAllocation allocation =
-                findEntityById(id);
+                findEntityForUpdate(id);
+        lockAllocationTargets(allocation);
+        validateCurrencies(allocation.getPayment(), allocation.isMainContractorInvoiceAllocation()
+                ? allocation.getMainContractorInvoice() : allocation.getSubcontractorInvoice());
+
 
         if (allocation.isMainContractorInvoiceAllocation()
                 && request.getDeductedAmount()
                 .compareTo(BigDecimal.ZERO) != 0) {
 
             throw new IllegalArgumentException(
-                    "Deducted amount must be zero "
-                            + "for main contractor invoice allocation"
+                    "Potrącenie musi wynosić zero "
+                            + "przy rozliczeniu faktury GW."
             );
         }
 
@@ -294,9 +298,25 @@ public class PaymentAllocationService {
     public void delete(Long id) {
 
         PaymentAllocation allocation =
-                findEntityById(id);
+                findEntityForUpdate(id);
+        lockAllocationTargets(allocation);
 
         repository.delete(allocation);
+    }
+
+    private PaymentAllocation findEntityForUpdate(Long id) {
+        return repository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono rozliczenia przelewu."));
+    }
+
+    private void lockAllocationTargets(PaymentAllocation allocation) {
+        paymentRepository.findByIdForUpdate(allocation.getPayment().getId()).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono przelewu."));
+        if (allocation.isMainContractorInvoiceAllocation()) {
+            mainContractorInvoiceRepository.findByIdForUpdate(allocation.getMainContractorInvoice().getId()).orElseThrow();
+        } else {
+            subcontractorInvoiceRepository.findByIdForUpdate(allocation.getSubcontractorInvoice().getId()).orElseThrow();
+        }
     }
 
     private PaymentAllocation findEntityById(
@@ -326,7 +346,7 @@ public class PaymentAllocationService {
 
             throw new IllegalArgumentException(
                     "Payment and subcontractor invoice "
-                            + "must use the same currency"
+                            + "muszą mieć tę samą walutę."
             );
         }
     }
@@ -343,8 +363,8 @@ public class PaymentAllocationService {
                 )) {
 
             throw new IllegalArgumentException(
-                    "This payment is already allocated "
-                            + "to this subcontractor invoice"
+                    "Ten przelew jest już przypisany "
+                            + "do tej faktury podwykonawcy. Zmień istniejące rozliczenie."
             );
         }
     }
@@ -361,36 +381,15 @@ public class PaymentAllocationService {
                 )) {
 
             throw new IllegalArgumentException(
-                    "This payment is already allocated "
-                            + "to this main contractor invoice"
+                    "Ten przelew jest już przypisany "
+                            + "do tej faktury GW. Zmień istniejące rozliczenie."
             );
         }
     }
 
-    private void validateAmounts(
-            BigDecimal allocatedAmount,
-            BigDecimal deductedAmount
-    ) {
-
-        if (allocatedAmount == null
-                || allocatedAmount.compareTo(
-                BigDecimal.ZERO
-        ) <= 0) {
-
-            throw new IllegalArgumentException(
-                    "Allocated amount must be greater than zero"
-            );
-        }
-
-        if (deductedAmount == null
-                || deductedAmount.compareTo(
-                BigDecimal.ZERO
-        ) < 0) {
-
-            throw new IllegalArgumentException(
-                    "Deducted amount cannot be negative"
-            );
-        }
+    private void validateAmounts(BigDecimal allocatedAmount, BigDecimal deductedAmount) {
+        PaymentRules.money(allocatedAmount, true);
+        PaymentRules.money(deductedAmount, false);
     }
 
     private void validateInvoiceTarget(
@@ -408,7 +407,7 @@ public class PaymentAllocationService {
                 == mainContractorSelected) {
 
             throw new IllegalArgumentException(
-                    "Payment allocation must reference exactly one invoice"
+                    "Rozliczenie przelewu musi wskazywać dokładnie jedną fakturę."
             );
         }
     }
@@ -423,7 +422,7 @@ public class PaymentAllocationService {
                 )) {
 
             throw new IllegalArgumentException(
-                    "Payment and invoice must use the same currency"
+                    "Przelew i faktura must use the same currency"
             );
         }
     }
@@ -454,20 +453,7 @@ public class PaymentAllocationService {
                             );
         }
 
-        BigDecimal newTotal =
-                alreadyAllocated.add(
-                        allocatedAmount
-                );
-
-        if (newTotal.compareTo(
-                payment.getAmount()
-        ) > 0) {
-
-            throw new IllegalArgumentException(
-                    "Total allocated amount cannot exceed "
-                            + "payment amount"
-            );
-        }
+        PaymentRules.capacity(payment.getAmount(), alreadyAllocated, allocatedAmount);
     }
 
     private PaymentAllocationResponse toResponse(
@@ -529,9 +515,10 @@ public class PaymentAllocationService {
                             allocation.getId()
                     )
 
-                    .paymentId(
-                            payment.getId()
-                    )
+                    .paymentId(payment.getId())
+                    .paymentDate(payment.getPaymentDate())
+                    .bankReference(payment.getBankReference())
+                    .paymentDescription(payment.getDescription())
                     .paymentAmount(
                             payment.getAmount()
                     )
@@ -678,9 +665,10 @@ public class PaymentAllocationService {
                             allocation.getId()
                     )
 
-                    .paymentId(
-                            payment.getId()
-                    )
+                    .paymentId(payment.getId())
+                    .paymentDate(payment.getPaymentDate())
+                    .bankReference(payment.getBankReference())
+                    .paymentDescription(payment.getDescription())
                     .paymentAmount(
                             payment.getAmount()
                     )
@@ -715,6 +703,9 @@ public class PaymentAllocationService {
                     /*
                      * Umowa podwykonawcza
                      */
+                    .mainContractId(invoice.getSubcontract().getMainContract().getId())
+                    .mainContractNumber(invoice.getSubcontract().getMainContract().getContractNumber())
+                    .investmentTaskId(invoice.getSubcontract().getMainContract().getInvestmentTask().getId())
                     .subcontractId(
                             invoice.getSubcontract()
                                     .getId()

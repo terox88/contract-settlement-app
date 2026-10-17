@@ -2,6 +2,7 @@ package pl.company.settlements.contract.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.budget.domain.Budget;
 import pl.company.settlements.budget.domain.BudgetYear;
@@ -66,6 +67,22 @@ public class FinancialLimitService {
         return modifyPlan(mainContractId, old -> parsePlan(request.years()));
     }
 
+    /** Wywoływane przy tworzeniu umowy, w tej samej transakcji co jej zapis. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public FinancialLimitResponse createInitialPlan(
+            Long mainContractId, FinancialLimitPlanRequest request
+    ) {
+        if (request == null) {
+            throw new IllegalArgumentException("Financial limit plan is required");
+        }
+        return modifyPlan(mainContractId, old -> {
+            if (old != null) {
+                throw new ConflictException("Financial limits already exist for this main contract");
+            }
+            return parsePlan(request.years());
+        }, true);
+    }
+
     @Transactional
     public FinancialLimitResponse create(FinancialLimitCreateRequest request) {
         if (request == null || request.getMainContractId() == null) {
@@ -128,6 +145,14 @@ public class FinancialLimitService {
             Long mainContractId,
             Function<FinancialLimit, Map<Integer, BigDecimal>> change
     ) {
+        return modifyPlan(mainContractId, change, false);
+    }
+
+    private FinancialLimitResponse modifyPlan(
+            Long mainContractId,
+            Function<FinancialLimit, Map<Integer, BigDecimal>> change,
+            boolean initialPlan
+    ) {
         MainContract contract = mainContractRepository.findById(mainContractId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Main contract " + mainContractId + " does not exist"
@@ -144,7 +169,7 @@ public class FinancialLimitService {
                 .orElse(null);
 
         Map<Integer, BigDecimal> proposed = change.apply(existing);
-        validatePlan(proposed, existing, contract, budget);
+        validatePlan(proposed, existing, contract, budget, initialPlan);
 
         FinancialLimit entity = existing == null
                 ? contract.getOrCreateFinancialLimit()
@@ -190,7 +215,8 @@ public class FinancialLimitService {
             Map<Integer, BigDecimal> proposed,
             FinancialLimit existing,
             MainContract contract,
-            Budget budget
+            Budget budget,
+            boolean initialPlan
     ) {
         if (proposed == null || proposed.isEmpty()) {
             throw new IllegalArgumentException("Financial limit plan cannot be empty");
@@ -271,8 +297,14 @@ public class FinancialLimitService {
                     .add(proposed.getOrDefault(year, ZERO));
             BigDecimal allowed = annualBudget.getOrDefault(year, ZERO);
 
+            // Nowa umowa jest już widoczna dla zapytania zaangażowania w tej transakcji.
+            // Jej domyślne zaangażowanie nie jest jednak wcześniej zatwierdzonym limitem.
+            BigDecimal baseline = initialPlan
+                    ? oldAmount.subtract(before.getOrDefault(year, ZERO))
+                    : oldAmount;
+
             // Do not worsen an existing overcommitment; allow reducing it.
-            if (adjusted.compareTo(allowed) > 0 && adjusted.compareTo(oldAmount) > 0) {
+            if (adjusted.compareTo(allowed) > 0 && adjusted.compareTo(baseline) > 0) {
                 throw new ConflictException(
                         "Insufficient budget in " + year + ": commitment would be "
                                 + adjusted + ", budget is " + allowed

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import http from '../api/http';
+import InitialFinancialLimitsFields from '../InitialFinancialLimitsFields';
+import { isMissingBudget } from '../utils/budgetForm';
+import { validateInitialFinancialLimits } from '../utils/financialLimitForm';
 import {
     buildMainContractPayload, buildMainContractUpdatePayload, contractToForm,
     CONTRACTOR_FIELDS,
@@ -34,6 +37,9 @@ function MainContractForm({ taskId, contractId }) {
     const [errors, setErrors] = useState({});
     const [saveError, setSaveError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [budget, setBudget] = useState(null);
+    const [initialLimitRows, setInitialLimitRows] = useState(null);
+    const limitRows = initialLimitRows ?? [{ year: contract.contractDate.slice(0, 4), amount: contract.initialValue }];
     const formRef = useRef(null);
     const savingRef = useRef(false);
     const mountedRef = useRef(false);
@@ -56,15 +62,23 @@ function MainContractForm({ taskId, contractId }) {
         Promise.all([
             http.get(path, { signal: controller.signal }),
             http.get('/contract-types', { signal: controller.signal }),
+            isEditing ? Promise.resolve(null) : http.get(`/budgets/investment-task/${taskId}`, { signal: controller.signal })
+                .catch((error) => { if (isMissingBudget(error, taskId)) return { data: null }; throw error; }),
         ])
-            .then(([response, typesResponse]) => {
+            .then(([response, typesResponse, budgetResponse]) => {
                 if (!active) return;
                 const options = readContractTypeOptions(typesResponse.data);
                 setContractTypes(options);
                 if (isEditing) {
                     setLoadedContract(response.data);
                     setContract(contractToForm(response.data));
-                } else setTask(response.data);
+                } else {
+                    if (String(response.data?.id) !== String(taskId)) throw new Error('Nie można potwierdzić zadania.');
+                    const data = budgetResponse.data;
+                    if (data && (String(data.investmentTaskId) !== String(taskId) || !Array.isArray(data.years))) throw new Error('Nieprawidłowe dane budżetu zadania.');
+                    setTask(response.data);
+                    setBudget(data);
+                }
             })
             .catch((error) => { if (active) setLoadError(error.message); })
             .finally(() => { if (active) setLoading(false); });
@@ -144,6 +158,8 @@ function MainContractForm({ taskId, contractId }) {
 
         const validation = isEditing ? validateContractData(contract, contractTypes)
             : validateMainContractForm(contract, contractor, nip, lookup, selected, contractTypes);
+        const limitsValidation = !isEditing ? validateInitialFinancialLimits(contract, budget, limitRows) : null;
+        if (limitsValidation?.error) validation.financialLimitYears = limitsValidation.error;
         setErrors(validation);
         setSaveError('');
         const firstInvalid = Object.keys(validation)[0];
@@ -158,7 +174,8 @@ function MainContractForm({ taskId, contractId }) {
             const response = isEditing
                 ? await http.put(`/main-contracts/${contractId}`, buildMainContractUpdatePayload(contract))
                 : await http.post('/main-contracts',
-                    buildMainContractPayload(taskId, contract, contractor, nip, selected));
+                    { ...buildMainContractPayload(taskId, contract, contractor, nip, selected),
+                        financialLimitYears: limitsValidation.years });
             const savedId = isEditing ? contractId : response.data.id;
             if (mountedRef.current) navigate(`/main-contracts/${savedId}`, { replace: true });
         } catch (error) {
@@ -220,6 +237,11 @@ function MainContractForm({ taskId, contractId }) {
                                     {contractField('shortDescription', 'Krótki opis', { multiline: true, wide: true, maxLength: 500 })}
                                 </div>
                             </fieldset>
+
+                            {!isEditing && <InitialFinancialLimitsFields contract={contract} budget={budget} rows={limitRows}
+                                onChange={(rows) => { setInitialLimitRows(rows); setErrors((current) => ({ ...current, financialLimitYears: '' })); setSaveError(''); }}
+                                onReset={() => { setInitialLimitRows(null); setErrors((current) => ({ ...current, financialLimitYears: '' })); }}
+                                error={errors.financialLimitYears} disabled={saving} onRefresh={() => setLoadAttempt((value) => value + 1)} />}
 
                             {isEditing ? (
                                 <section className="main-form-section main-form-assigned-contractor">

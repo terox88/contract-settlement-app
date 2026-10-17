@@ -12,6 +12,7 @@ import pl.company.settlements.contract.model.MainContractCreateRequest;
 import pl.company.settlements.contract.model.MainContractFilter;
 import pl.company.settlements.contract.model.MainContractResponse;
 import pl.company.settlements.contract.model.MainContractUpdateRequest;
+import pl.company.settlements.contract.model.FinancialLimitPlanRequest;
 import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contract.repository.specification.MainContractSpecification;
 import pl.company.settlements.contractor.domain.Contractor;
@@ -42,6 +43,7 @@ public class MainContractService {
     private final PaymentAllocationRepository paymentAllocationRepository;
     private final ContractorService contractorService;
     private final ContractHierarchyValidationService hierarchyValidationService;
+    private final FinancialLimitService financialLimitService;
 
     public MainContractResponse getById(
             Long id
@@ -193,6 +195,13 @@ public class MainContractService {
         );
 
         MainContract savedContract = repository.save(contract);
+
+        if (request.getFinancialLimitYears() != null) {
+            // Ta sama transakcja: wykonawca, umowa i limity zatwierdzają się razem.
+            // Serwis limitów blokuje budżet i zastępuje domyślne zaangażowanie nowym planem.
+            financialLimitService.createInitialPlan(savedContract.getId(),
+                    new FinancialLimitPlanRequest(request.getFinancialLimitYears()));
+        }
 
         return toResponse(
                 savedContract,

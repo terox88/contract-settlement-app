@@ -1,5 +1,7 @@
 package pl.company.settlements.payment.model;
 
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -19,10 +21,12 @@ public class PaymentCreateRequest {
 
     @NotNull
     @Positive
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal amount;
 
     @NotBlank
     @Size(min = 3, max = 3)
+    @Pattern(regexp = "[A-Za-z]{3}")
     private String currency = "PLN";
 
     @Size(max = 255)

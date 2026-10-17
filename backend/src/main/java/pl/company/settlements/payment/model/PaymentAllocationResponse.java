@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Getter
 @Builder
@@ -12,6 +13,9 @@ public class PaymentAllocationResponse {
     private Long id;
 
     private Long paymentId;
+    private LocalDate paymentDate;
+    private String bankReference;
+    private String paymentDescription;
     private BigDecimal paymentAmount;
     private String paymentCurrency;
 

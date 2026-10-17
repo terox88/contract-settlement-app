@@ -5,7 +5,7 @@ import InvoiceDocuments from '../InvoiceDocuments';
 import { formatAmendmentDate } from '../utils/contractAmendmentForm';
 import { filterInvoices, formatInvoiceAmount, formatInvoiceCents, invoiceTotals, readInvoices } from '../utils/subcontractorInvoiceForm';
 import './MainContractFormPage.css';
-import './SubcontractorInvoicesPage.css';
+import './PaymentsPage.css';
 
 export default function SubcontractorInvoicesPage() {
     const { contractId, subcontractId } = useParams();
@@ -89,8 +89,9 @@ function InvoiceList({ contractId, subcontractId }) {
                                         <span className={`invoice-settlement-badge ${invoice.amountExceeded ? 'invoice-badge-warning' : invoice.settled ? 'invoice-badge-settled' : ''}`}>
                                             {invoice.amountExceeded ? 'Kwota rozliczenia przekroczona' : invoice.settled ? 'Rozliczona' : 'Do rozliczenia'}
                                         </span></div>
+                                    <div className="settlement-actions"><Link className="main-form-button main-form-button-primary" to={`${base}/${invoice.id}/payments`}>Płatności i potrącenia</Link>
                                     {invoice.editable === true ? <Link to={`${base}/${invoice.id}/edit`} className="main-form-button">Edytuj fakturę</Link>
-                                        : <span className="invoice-edit-blocked">{invoice.editBlockedReason || 'Edycja niedostępna.'}</span>}
+                                        : <span className="invoice-edit-blocked">{invoice.editBlockedReason || 'Edycja niedostępna.'}</span>}</div>
                                 </div>
                                 {invoice.description && <p className="invoice-description">{invoice.description}</p>}
                                 <dl className="invoice-metrics invoice-meta">

@@ -56,3 +56,9 @@
     .main-form-heading h1 { font-size: 23px; }
     .main-form-footer .main-form-button { flex: 1 1 auto; }
 }
+
+.initial-limits-rows { display: grid; gap: 14px; margin: 18px 0; }
+.initial-limits-row { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(160px, 2fr) auto; align-items: end; gap: 14px; }
+.initial-limits-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.initial-limits-total { color: #374151; font-size: 14px; }
+@media (max-width: 600px) { .initial-limits-row { grid-template-columns: 1fr; } }

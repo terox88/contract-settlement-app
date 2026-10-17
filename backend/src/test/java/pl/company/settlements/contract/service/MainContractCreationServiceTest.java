@@ -11,6 +11,8 @@ import pl.company.settlements.contract.domain.ContractType;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.RemunerationType;
 import pl.company.settlements.contract.model.MainContractCreateRequest;
+import pl.company.settlements.contract.model.FinancialLimitPlanRequest;
+import pl.company.settlements.contract.model.FinancialLimitYearRequest;
 import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.model.ContractorCreateRequest;
@@ -23,6 +25,7 @@ import pl.company.settlements.task.repository.InvestmentTaskRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,6 +41,7 @@ class MainContractCreationServiceTest {
     @Mock private PaymentAllocationRepository paymentAllocationRepository;
     @Mock private ContractorService contractorService;
     @Mock private ContractHierarchyValidationService hierarchyValidationService;
+    @Mock private FinancialLimitService financialLimitService;
     @InjectMocks private MainContractService service;
 
     private InvestmentTask task;
@@ -76,6 +80,7 @@ class MainContractCreationServiceTest {
         assertEquals(new BigDecimal("100.00"), response.getRemainingForSubcontracts());
         verifyNoInteractions(contractorService);
         verify(contractorRepository, never()).save(any());
+        verifyNoInteractions(financialLimitService);
     }
 
     @Test
@@ -132,6 +137,49 @@ class MainContractCreationServiceTest {
         when(repository.save(any(MainContract.class))).thenThrow(failure);
 
         assertSame(failure, assertThrows(IllegalStateException.class, () -> service.create(request)));
+    }
+
+    @Test
+    void createsExplicitLimitsAfterSavingContract() {
+        request.setNewMainContractor(newContractorData());
+        when(contractorService.createEntity(request.getNewMainContractor()))
+                .thenReturn(new Contractor("Nowa firma", "1234567890"));
+        request.setFinancialLimitYears(List.of(year(2026, "40.00"), year(2027, "60.00")));
+        prepareSuccessfulSave();
+
+        var response = service.create(request);
+
+        ArgumentCaptor<FinancialLimitPlanRequest> plan = ArgumentCaptor.forClass(FinancialLimitPlanRequest.class);
+        var order = inOrder(repository, financialLimitService);
+        order.verify(repository).save(any(MainContract.class));
+        order.verify(financialLimitService).createInitialPlan(eq(10L), plan.capture());
+        assertEquals(10L, response.getId());
+        assertEquals(request.getFinancialLimitYears(), plan.getValue().years());
+    }
+
+    @Test
+    void propagatesLimitFailureSoWholeCreationTransactionCanRollBack() {
+        request.setNewMainContractor(newContractorData());
+        when(contractorService.createEntity(request.getNewMainContractor()))
+                .thenReturn(new Contractor("Nowa firma", "1234567890"));
+        request.setFinancialLimitYears(List.of(year(2026, "100.00")));
+        when(repository.save(any(MainContract.class))).thenAnswer(invocation -> {
+            MainContract contract = invocation.getArgument(0);
+            contract.setId(10L);
+            return contract;
+        });
+        IllegalArgumentException failure = new IllegalArgumentException("Insufficient budget");
+        when(financialLimitService.createInitialPlan(eq(10L), any(FinancialLimitPlanRequest.class)))
+                .thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalArgumentException.class, () -> service.create(request)));
+    }
+
+    private FinancialLimitYearRequest year(int year, String amount) {
+        FinancialLimitYearRequest row = new FinancialLimitYearRequest();
+        row.setYear(year);
+        row.setAmount(new BigDecimal(amount));
+        return row;
     }
 
     private void prepareSuccessfulSave() {

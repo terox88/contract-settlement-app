@@ -138,7 +138,7 @@ public class PaymentService {
     ) {
 
         Payment payment =
-                findEntityById(id);
+                findEntityForUpdate(id);
 
         validateAmount(
                 request.getAmount()
@@ -154,8 +154,8 @@ public class PaymentService {
                 .compareTo(allocatedAmount) < 0) {
 
             throw new IllegalArgumentException(
-                    "Payment amount cannot be lower than "
-                            + "the amount already allocated to invoices"
+                    "Kwota przelewu nie może być mniejsza niż "
+                            + "suma kwot przypisanych do faktur."
             );
         }
 
@@ -188,18 +188,23 @@ public class PaymentService {
     public void delete(Long id) {
 
         Payment payment =
-                findEntityById(id);
+                findEntityForUpdate(id);
 
         if (paymentAllocationRepository
                 .existsByPayment_Id(id)) {
 
             throw new IllegalArgumentException(
-                    "Payment cannot be deleted while it has "
-                            + "invoice allocations"
+                    "Nie można usunąć przelewu, który ma "
+                            + "przypisania do faktur."
             );
         }
 
         paymentRepository.delete(payment);
+    }
+
+    private Payment findEntityForUpdate(Long id) {
+        return paymentRepository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono przelewu."));
     }
 
     private Payment findEntityById(Long id) {
@@ -215,19 +220,8 @@ public class PaymentService {
                 );
     }
 
-    private void validateAmount(
-            BigDecimal amount
-    ) {
-
-        if (amount == null
-                || amount.compareTo(
-                BigDecimal.ZERO
-        ) <= 0) {
-
-            throw new IllegalArgumentException(
-                    "Payment amount must be greater than zero"
-            );
-        }
+    private void validateAmount(BigDecimal amount) {
+        PaymentRules.money(amount, true);
     }
 
     private void validateCurrencyForExistingAllocations(
@@ -273,9 +267,9 @@ public class PaymentService {
         if (currencyMismatch) {
 
             throw new IllegalArgumentException(
-                    "Payment currency cannot be changed because "
-                            + "it would differ from an allocated "
-                            + "invoice currency"
+                    "Nie można zmienić waluty przelewu, ponieważ "
+                            + "byłaby niezgodna z walutą "
+                            + "powiązanej faktury."
             );
         }
     }
@@ -324,9 +318,9 @@ public class PaymentService {
                 currency.trim()
                         .toUpperCase(Locale.ROOT);
 
-        if (normalized.length() != 3) {
+        if (!normalized.matches("[A-Z]{3}")) {
             throw new IllegalArgumentException(
-                    "Currency must contain exactly 3 characters"
+                    "Waluta musi mieć trzyliterowy kod."
             );
         }
 
@@ -391,7 +385,7 @@ public class PaymentService {
                         ) == 0
                 )
                 .allocationCount(
-                        payment.getAllocations().size()
+                        Math.toIntExact(paymentAllocationRepository.countByPayment_Id(payment.getId()))
                 )
                 .build();
     }

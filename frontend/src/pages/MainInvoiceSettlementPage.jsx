@@ -66,7 +66,9 @@ function SettlementPage({ contractId, mainInvoiceId }) {
         <section className="card invoice-list-card">
             <div className="invoice-heading"><div><h1>Rozliczenie podwykonawców</h1>
                 {main && <><h2>Faktura GW {main.invoiceNumber}</h2><p>{main.mainContractorName} · umowa {main.mainContractNumber}</p></>}
-            </div>{!loading && !loadError && !saving && <Link to={`${base}/${mainInvoiceId}/edit`} className="main-form-button">Edytuj fakturę GW</Link>}</div>
+            </div>{!loading && !loadError && !saving && <div className="settlement-actions">
+                <Link to={`${base}/${mainInvoiceId}/payments`} className="main-form-button">Płatności faktury GW</Link>
+                <Link to={`${base}/${mainInvoiceId}/edit`} className="main-form-button">Edytuj fakturę GW</Link></div>}</div>
             {success && <p className="settlement-success" role="status">{success}</p>}
             {saveError && <p className="error-message" role="alert">{saveError}</p>}
             {saving && <p role="status">Zapisywanie zmian...</p>}
@@ -117,7 +119,9 @@ function SettlementPage({ contractId, mainInvoiceId }) {
                             <p>Umowa {invoice.subcontractNumber} · NIP {invoice.subcontractorTaxId}</p>
                             <span className={`invoice-settlement-badge ${invoice.amountExceeded ? 'invoice-badge-warning' : invoice.settled ? 'invoice-badge-settled' : ''}`}>
                                 {invoice.amountExceeded ? 'Przekroczona kwota rozliczenia' : invoice.settled ? 'Cała faktura rozliczona' : 'Faktura z saldem do rozliczenia'}</span>
-                        </div><div className="settlement-actions"><button className="main-form-button" disabled={saving} onClick={() => { setEditingId(row.id); setRemovingId(null); }}>Zmień przypisaną kwotę</button>
+                        </div><div className="settlement-actions">{!saving && <Link className="main-form-button main-form-button-primary"
+                            to={`/main-contracts/${contractId}/subcontracts/${invoice.subcontractId}/invoices/${invoice.id}/payments?returnMainInvoiceId=${mainInvoiceId}`}>Płatności i potrącenia</Link>}
+                            <button className="main-form-button" disabled={saving} onClick={() => { setEditingId(row.id); setRemovingId(null); }}>Zmień przypisaną kwotę</button>
                             <button className="main-form-button" disabled={saving} onClick={() => { setRemovingId(row.id); setEditingId(null); }}>Usuń przypisanie</button></div></div>
                         <dl className="invoice-metrics invoice-meta">
                             <Metric label="Przypisano do tej faktury GW" value={formatInvoiceAmount(row.settledAmount, main.currency)} />

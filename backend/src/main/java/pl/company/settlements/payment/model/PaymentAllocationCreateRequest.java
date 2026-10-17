@@ -1,5 +1,6 @@
 package pl.company.settlements.payment.model;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -21,9 +22,11 @@ public class PaymentAllocationCreateRequest {
 
     @NotNull
     @Positive
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal allocatedAmount;
 
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal deductedAmount = BigDecimal.ZERO;
 }

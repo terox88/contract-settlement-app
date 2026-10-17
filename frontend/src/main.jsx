@@ -5,6 +5,7 @@ import {
 } from 'react-router-dom';
 
 import App from './App';
+import TaskNavigation from './TaskNavigation';
 import './styles.css';
 
 ReactDOM
@@ -15,6 +16,7 @@ ReactDOM
         <React.StrictMode>
             <BrowserRouter>
                 <main className="container">
+                    <TaskNavigation />
                     <App />
                 </main>
             </BrowserRouter>
