@@ -1,7 +1,10 @@
 package pl.company.settlements.invoice.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import java.util.Optional;
 import org.springframework.data.repository.query.Param;
 import pl.company.settlements.invoice.domain.MainInvoiceSettlement;
 import pl.company.settlements.invoice.model.SubcontractorInvoiceSettlementAmounts;
@@ -12,6 +15,13 @@ import java.util.List;
 
 public interface MainInvoiceSettlementRepository
         extends JpaRepository<MainInvoiceSettlement, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from MainInvoiceSettlement i where i.id = :id")
+    Optional<MainInvoiceSettlement> findByIdForUpdate(@Param("id") Long id);
+
+
+    boolean existsByMainContractorInvoice_Id(Long mainContractorInvoiceId);
+    boolean existsBySubcontractorInvoice_Id(Long subcontractorInvoiceId);
 
     boolean existsByMainContractorInvoice_IdAndSubcontractorInvoice_Id(
             Long mainContractorInvoiceId,

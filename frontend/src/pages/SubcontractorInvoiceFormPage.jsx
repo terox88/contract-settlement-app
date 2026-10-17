@@ -1,20 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import http from '../api/http';
 import InvoiceDocuments from '../InvoiceDocuments';
+import InvoiceFields, { InvoiceField } from '../InvoiceFields';
+import { assignmentError, buildInvoiceAndAssignmentRequest, readMainInvoice } from '../utils/mainInvoiceSettlement';
 import { buildInvoiceRequest, calculatedGross, emptyInvoice, invoiceToForm, readInvoice, validateInvoiceForm } from '../utils/subcontractorInvoiceForm';
 import './MainContractFormPage.css';
 import './SubcontractorInvoicesPage.css';
 
 export default function SubcontractorInvoiceFormPage() {
     const { contractId, subcontractId, invoiceId } = useParams();
-    return <InvoiceForm key={`${contractId}-${subcontractId}-${invoiceId ?? 'new'}`}
-        contractId={contractId} subcontractId={subcontractId} invoiceId={invoiceId} />;
+    const [searchParams] = useSearchParams();
+    const mainInvoiceId = invoiceId ? null : searchParams.get('mainInvoiceId');
+    return <InvoiceForm key={`${contractId}-${subcontractId}-${invoiceId ?? 'new'}-${mainInvoiceId ?? ''}`}
+        contractId={contractId} subcontractId={subcontractId} invoiceId={invoiceId} mainInvoiceId={mainInvoiceId} />;
 }
 
-function InvoiceForm({ contractId, subcontractId, invoiceId }) {
+function InvoiceForm({ contractId, subcontractId, invoiceId, mainInvoiceId }) {
     const navigate = useNavigate();
-    const returnPath = `/main-contracts/${contractId}/subcontracts/${subcontractId}/invoices`;
+    const returnPath = mainInvoiceId ? `/main-contracts/${contractId}/invoices/${mainInvoiceId}`
+        : `/main-contracts/${contractId}/subcontracts/${subcontractId}/invoices`;
+    const [mainInvoice, setMainInvoice] = useState(null);
+    const [assignFull, setAssignFull] = useState(true);
+    const [assignmentAmount, setAssignmentAmount] = useState('');
     const isEditing = Boolean(invoiceId);
     const [subcontract, setSubcontract] = useState(null);
     const [savedInvoice, setSavedInvoice] = useState(null);
@@ -42,6 +50,7 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
         setLoadError('');
         const requests = [http.get(`/subcontracts/${subcontractId}`, { signal: controller.signal })];
         if (isEditing) requests.push(http.get(`/subcontractor-invoices/${invoiceId}`, { signal: controller.signal }));
+        if (mainInvoiceId) requests.push(http.get(`/main-contractor-invoices/${mainInvoiceId}`, { signal: controller.signal }));
         Promise.all(requests).then(([subResponse, invoiceResponse]) => {
             if (!active) return;
             const sub = subResponse.data;
@@ -55,13 +64,15 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
                 setForm(invoiceToForm(invoice));
             } else {
                 const vat = sub.vatRate == null ? '' : String(sub.vatRate).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
-                setForm((current) => ({ ...current, vatRates: vat }));
+                const main = mainInvoiceId ? readMainInvoice(invoiceResponse.data, contractId, mainInvoiceId) : null;
+                if (main) setMainInvoice(main);
+                setForm((current) => ({ ...current, vatRates: vat, currency: main?.currency ?? current.currency }));
             }
             setSubcontract(sub);
         }).catch((failure) => { if (active) setLoadError(failure.message); })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; controller.abort(); };
-    }, [contractId, subcontractId, invoiceId, isEditing, attempt]);
+    }, [contractId, subcontractId, invoiceId, isEditing, mainInvoiceId, attempt]);
 
     function change(name, value) {
         setForm((current) => ({ ...current, [name]: value }));
@@ -73,6 +84,12 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
         event.preventDefault();
         if (savingRef.current || loading || loadError || !subcontract || !editable) return;
         const validation = validateInvoiceForm(form);
+        if (mainInvoiceId) {
+            if (!mainInvoice) return;
+            if (form.currency.trim().toUpperCase() !== mainInvoice.currency.toUpperCase()) validation.currency = 'Waluta musi być zgodna z fakturą GW.';
+            const amountError = assignmentError(assignFull ? calculatedGross(form)?.amount : assignmentAmount, calculatedGross(form)?.amount);
+            if (amountError) validation.assignmentAmount = amountError;
+        }
         setErrors(validation);
         setSaveError('');
         const firstInvalid = Object.keys(validation)[0];
@@ -83,7 +100,9 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
         savingRef.current = true;
         setSaving(true);
         try {
-            const request = buildInvoiceRequest(subcontractId, invoiceId, form);
+            const request = mainInvoiceId
+                ? buildInvoiceAndAssignmentRequest(mainInvoiceId, subcontractId, form, assignFull ? calculatedGross(form).amount : assignmentAmount)
+                : buildInvoiceRequest(subcontractId, invoiceId, form);
             await http[request.method](request.url, request.data);
             if (mountedRef.current) navigate(returnPath, { replace: true });
         } catch (failure) {
@@ -94,15 +113,13 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
         }
     }
 
-    const gross = calculatedGross(form);
-    const field = (name, label, options = {}) => <InvoiceField name={name} label={label} value={form[name]}
-        onChange={(value) => change(name, value)} error={errors[name]} {...options} />;
     return <>
-        {saving ? <span className="back-link" aria-disabled="true">← Faktury podwykonawcy</span>
-            : <Link className="back-link" to={returnPath}>← Faktury podwykonawcy</Link>}
+        {saving ? <span className="back-link" aria-disabled="true">← {mainInvoiceId ? 'Rozliczenie faktury GW' : 'Faktury podwykonawcy'}</span>
+            : <Link className="back-link" to={returnPath}>← {mainInvoiceId ? 'Rozliczenie faktury GW' : 'Faktury podwykonawcy'}</Link>}
         <section className="card main-form-card">
             <div className="main-form-heading"><h1>{isEditing ? 'Edytuj fakturę podwykonawcy' : 'Dodaj fakturę podwykonawcy'}</h1>
                 {subcontract && <p>{subcontract.subcontractorName} · umowa {subcontract.contractNumber}</p>}
+                {mainInvoice && <p>Przypisanie do faktury GW {mainInvoice.invoiceNumber}.</p>}
                 <p>Pola oznaczone * są wymagane.</p>
             </div>
             {loading ? <p className="loading-message" role="status">Ładowanie danych...</p>
@@ -115,20 +132,17 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
                         {saveError && <div className="error-message main-form-alert" role="alert">{saveError}</div>}
                         <fieldset className="main-form-section" disabled={saving || !editable}>
                             <legend>Dane faktury</legend>
-                            <div className="main-form-grid">
-                                {field('invoiceNumber', 'Numer faktury', { required: true, maxLength: 255 })}
-                                {field('issueDate', 'Data wystawienia', { required: true, type: 'date' })}
-                                {field('saleDate', 'Data sprzedaży', { type: 'date' })}
-                                {field('dueDate', 'Termin płatności', { type: 'date' })}
-                                {field('netAmount', 'Kwota netto', { required: true, inputMode: 'decimal' })}
-                                {field('vatAmount', 'Kwota VAT', { required: true, inputMode: 'decimal' })}
-                                <InvoiceField name="grossAmount" label="Kwota brutto — netto + VAT" value={gross?.amount.replace('.', ',') ?? ''} readOnly />
-                                {field('currency', 'Waluta', { required: true, maxLength: 3 })}
-                                {field('vatRates', 'Stawki VAT', { required: true, wide: true,
-                                    hint: 'Wpisz stawki z faktury, rozdzielając je średnikami, np. 23; 8; ZW.' })}
-                                {field('description', 'Opis', { wide: true, multiline: true, maxLength: 1000 })}
-                            </div>
+                            <InvoiceFields form={form} errors={errors} change={change} />
                         </fieldset>
+                        {mainInvoice && <fieldset className="main-form-section" disabled={saving}>
+                            <legend>Przypisanie do faktury GW {mainInvoice.invoiceNumber}</legend>
+                            <label className="invoice-filter-check"><input type="checkbox" checked={assignFull}
+                                onChange={(event) => { setAssignFull(event.target.checked); setErrors((current) => ({ ...current, assignmentAmount: '' })); }} /> Przypisz całą wartość brutto</label>
+                            <InvoiceField name="assignmentAmount" label="Kwota przypisana" inputMode="decimal" required readOnly={assignFull}
+                                value={assignFull ? calculatedGross(form)?.amount ?? '' : assignmentAmount}
+                                onChange={(value) => { setAssignmentAmount(value); setErrors((current) => ({ ...current, assignmentAmount: '' })); }}
+                                error={errors.assignmentAmount} hint="Faktura i jej przypisanie zostaną zapisane razem. Przypisanie nie oznacza zapłaty." />
+                        </fieldset>}
                         {isEditing ? <InvoiceDocuments invoice={savedInvoice} /> : <section className="invoice-document-note">
                             <h2>Dokumenty tej faktury</h2>
                             <p>Na liście faktur zobaczysz osobno plik faktury (PDF/XML), plik oświadczenia oraz potwierdzenia powiązanych przelewów.</p>
@@ -136,7 +150,7 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
                         </section>}
                         <div className="main-form-footer">
                             {editable && <button type="submit" className="main-form-button main-form-button-primary" disabled={saving}>
-                                {saving ? 'Zapisywanie...' : isEditing ? 'Zapisz zmiany' : 'Dodaj fakturę'}
+                                {saving ? 'Zapisywanie...' : isEditing ? 'Zapisz zmiany' : mainInvoiceId ? 'Zapisz fakturę i przypisz' : 'Dodaj fakturę'}
                             </button>}
                             <button type="button" className="main-form-button" disabled={saving} onClick={() => navigate(returnPath)}>
                                 {editable ? 'Anuluj' : 'Wróć do listy'}
@@ -149,17 +163,3 @@ function InvoiceForm({ contractId, subcontractId, invoiceId }) {
     </>;
 }
 
-function InvoiceField({ name, label, value, onChange, error, required = false, type = 'text', inputMode,
-    readOnly = false, multiline = false, wide = false, maxLength, hint }) {
-    const id = `invoice-form-${name}`;
-    const describedBy = [error ? `${id}-error` : '', hint ? `${id}-hint` : ''].filter(Boolean).join(' ') || undefined;
-    const props = { id, name, value, required, readOnly, maxLength, inputMode,
-        'aria-invalid': Boolean(error), 'aria-describedby': describedBy,
-        onChange: onChange ? (event) => onChange(event.target.value) : undefined };
-    return <div className={`main-form-field${wide ? ' main-form-field-wide' : ''}`}>
-        <label htmlFor={id}>{label}{required ? ' *' : ''}</label>
-        {multiline ? <textarea {...props} rows={3} /> : <input {...props} type={type} />}
-        {hint && <p className="invoice-field-hint" id={`${id}-hint`}>{hint}</p>}
-        {error && <p className="main-form-field-error" id={`${id}-error`}>{error}</p>}
-    </div>;
-}

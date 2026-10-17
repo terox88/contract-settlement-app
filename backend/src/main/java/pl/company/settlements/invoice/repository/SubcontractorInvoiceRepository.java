@@ -5,7 +5,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import java.util.Optional;
 import org.springframework.data.repository.query.Param;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -19,6 +22,10 @@ import java.util.List;
 public interface SubcontractorInvoiceRepository
         extends JpaRepository<SubcontractorInvoice, Long>,
         JpaSpecificationExecutor<SubcontractorInvoice> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from SubcontractorInvoice i where i.id = :id")
+    Optional<SubcontractorInvoice> findByIdForUpdate(@Param("id") Long id);
+
 
     @Query("""
             SELECT COALESCE(SUM(i.grossAmount), 0)

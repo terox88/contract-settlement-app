@@ -14,6 +14,8 @@ public class SubcontractorInvoiceFilter {
 
     private Long subcontractId;
 
+    private Long mainContractId;
+
     private Long subcontractorId;
 
     private LocalDate issueDateFrom;

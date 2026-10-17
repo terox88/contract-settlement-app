@@ -10,6 +10,7 @@ import pl.company.settlements.invoice.model.MainContractorInvoiceCreateRequest;
 import pl.company.settlements.invoice.model.MainContractorInvoiceResponse;
 import pl.company.settlements.invoice.model.MainContractorInvoiceUpdateRequest;
 import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository;
+import pl.company.settlements.invoice.repository.MainInvoiceSettlementRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class MainContractorInvoiceService {
 
     private final MainContractorInvoiceRepository repository;
     private final MainContractRepository mainContractRepository;
+    private final MainInvoiceSettlementRepository settlementRepository;
 
     public MainContractorInvoiceResponse getById(
             Long id
@@ -112,7 +114,13 @@ public class MainContractorInvoiceService {
             MainContractorInvoiceUpdateRequest request
     ) {
         MainContractorInvoice invoice =
-                findEntityById(id);
+                repository.findByIdForUpdate(id).orElseThrow(() ->
+                        new IllegalArgumentException("Nie znaleziono faktury GW."));
+        if (!invoice.getCurrency().equalsIgnoreCase(request.getCurrency().trim())
+                && (settlementRepository.existsByMainContractorInvoice_Id(id)
+                    || !invoice.getPaymentAllocations().isEmpty())) {
+            throw new IllegalArgumentException("Nie można zmienić waluty faktury z przypisaniami lub płatnościami.");
+        }
 
         String invoiceNumber =
                 normalizeInvoiceNumber(
@@ -203,6 +211,11 @@ public class MainContractorInvoiceService {
             String currency,
             String description
     ) {
+        if (netAmount == null || vatAmount == null || grossAmount == null
+                || netAmount.signum() < 0 || vatAmount.signum() < 0 || grossAmount.signum() <= 0
+                || netAmount.add(vatAmount).compareTo(grossAmount) != 0) {
+            throw new IllegalArgumentException("Kwota brutto musi być dodatnia i równa sumie netto oraz VAT.");
+        }
         invoice.setInvoiceNumber(
                 invoiceNumber
         );

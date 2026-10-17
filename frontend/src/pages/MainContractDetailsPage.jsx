@@ -356,12 +356,11 @@ export default function MainContractDetailsPage() {
                     }
                 />
 
-                <SectionCard
-                    title="Faktury GW"
-                    description={
-                        'Faktury generalnego wykonawcy i ich rozliczenie.'
-                    }
-                />
+                <section className="card">
+                    <h2>Faktury GW</h2>
+                    <p>Faktury głównego wykonawcy, przypisane faktury podwykonawców i dokumenty rozliczenia.</p>
+                    <Link className="main-form-button" to={`/main-contracts/${contract.id}/invoices`}>Przejdź do faktur GW</Link>
+                </section>
 
                 <SectionCard
                     title="Załączniki"

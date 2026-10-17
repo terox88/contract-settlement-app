@@ -148,7 +148,10 @@ public class SubcontractorInvoiceService {
 
     @Transactional
     public void delete(Long id) {
-        SubcontractorInvoice invoice = findEntityById(id);
+        SubcontractorInvoice invoice = findEntityForUpdate(id);
+        if (mainInvoiceSettlementRepository.existsBySubcontractorInvoice_Id(id)) {
+            throw new IllegalStateException("Najpierw usuń przypisania tej faktury do faktur GW.");
+        }
         if (!invoice.getPaymentAllocations().isEmpty()) {
             throw new IllegalStateException(
                     "Cannot delete invoice that has payment allocations."
@@ -215,13 +218,17 @@ public class SubcontractorInvoiceService {
                 request.getVatAmount(),
                 request.getGrossAmount()
         );
-        SubcontractorInvoice invoice = findEntityById(id);
+        SubcontractorInvoice invoice = findEntityForUpdate(id);
 
         if (!invoice.getPaymentAllocations().isEmpty()) {
             throw new IllegalStateException(
                     "Faktura ma przypisane płatności lub potrącenia. Nie można zmieniać jej danych."
             );
         }
+
+        InvoiceAssignmentRules.validateInvoiceChange(request.getGrossAmount(),
+                mainInvoiceSettlementRepository.sumBySubcontractorInvoiceId(id),
+                invoice.getCurrency(), request.getCurrency());
 
         applyInvoiceData(
                 invoice,
@@ -238,6 +245,11 @@ public class SubcontractorInvoiceService {
         );
 
         return toResponseWithAggregates(invoice);
+    }
+
+    private SubcontractorInvoice findEntityForUpdate(Long id) {
+        return repository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono faktury podwykonawcy."));
     }
 
     private void applyInvoiceData(

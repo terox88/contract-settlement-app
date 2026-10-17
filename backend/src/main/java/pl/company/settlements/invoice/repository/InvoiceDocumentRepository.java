@@ -30,18 +30,18 @@ public interface InvoiceDocumentRepository extends Repository<SubcontractorInvoi
     }
 
     @Query("""
-            select a.subcontractorInvoice.id as invoiceId, a.file.id as fileId, a.type as attachmentType
+            select a.subcontractorInvoice.id as invoiceId, a.storedFile.id as fileId, a.type as attachmentType
             from DocumentAttachment a
-            where a.subcontractorInvoice.id in :invoiceIds and a.file is not null
+            where a.subcontractorInvoice.id in :invoiceIds and a.storedFile is not null
             """)
     List<DocumentRow> findDirectDocuments(@Param("invoiceIds") Collection<Long> invoiceIds);
 
     @Query("""
             select a.subcontractorStatement.subcontractorInvoice.id as invoiceId,
-                   a.file.id as fileId, a.type as attachmentType
+                   a.storedFile.id as fileId, a.type as attachmentType
             from DocumentAttachment a
             where a.subcontractorStatement.subcontractorInvoice.id in :invoiceIds
-              and a.type = :type and a.file is not null
+              and a.type = :type and a.storedFile is not null
             """)
     List<DocumentRow> findStatementDocuments(@Param("invoiceIds") Collection<Long> invoiceIds,
                                              @Param("type") AttachmentType type);
@@ -56,11 +56,11 @@ public interface InvoiceDocumentRepository extends Repository<SubcontractorInvoi
 
     @Query("""
             select pa.subcontractorInvoice.id as invoiceId, pa.payment.id as paymentId,
-                   a.file.id as fileId
+                   a.storedFile.id as fileId
             from PaymentAllocation pa, DocumentAttachment a
             where pa.subcontractorInvoice.id in :invoiceIds
               and pa.allocatedAmount > 0 and a.payment = pa.payment
-              and a.type = :type and a.file is not null
+              and a.type = :type and a.storedFile is not null
             """)
     List<PaymentDocumentRow> findPaymentDocuments(@Param("invoiceIds") Collection<Long> invoiceIds,
                                                  @Param("type") AttachmentType type);

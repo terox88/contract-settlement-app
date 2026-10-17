@@ -1,6 +1,7 @@
 package pl.company.settlements.invoice.model;
 
-import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -36,21 +37,25 @@ public class MainContractorInvoiceCreateRequest {
 
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal netAmount;
 
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal vatAmount;
 
     @NotNull
     @Positive
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal grossAmount;
 
     @NotEmpty
-    private List<String> vatRates =
+    private List<@NotBlank @Size(max = 20) String> vatRates =
             new ArrayList<>();
     @NotBlank
     @Size(min = 3, max = 3)
+    @Pattern(regexp = "[A-Za-z]{3}")
     private String currency = "PLN";
 
     @Size(max = 1000)

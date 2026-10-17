@@ -20,6 +20,7 @@ public final class SubcontractorInvoiceSpecification {
         return Specification.allOf(
                 invoiceNumberContains(filter.getInvoiceNumber()),
                 hasSubcontract(filter.getSubcontractId()),
+                hasMainContract(filter.getMainContractId()),
                 hasSubcontractor(filter.getSubcontractorId()),
                 issueDateFrom(filter.getIssueDateFrom()),
                 issueDateTo(filter.getIssueDateTo()),
@@ -45,6 +46,11 @@ public final class SubcontractorInvoiceSpecification {
                         criteriaBuilder.lower(root.get("invoiceNumber")),
                         pattern
                 );
+    }
+
+    private static Specification<SubcontractorInvoice> hasMainContract(Long id) {
+        if (id == null) return Specification.unrestricted();
+        return (root, query, cb) -> cb.equal(root.get("subcontract").get("mainContract").get("id"), id);
     }
 
     private static Specification<SubcontractorInvoice> hasSubcontract(

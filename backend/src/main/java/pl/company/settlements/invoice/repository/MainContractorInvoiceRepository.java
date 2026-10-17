@@ -2,7 +2,10 @@ package pl.company.settlements.invoice.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import java.util.Optional;
 import org.springframework.data.repository.query.Param;
 import pl.company.settlements.invoice.domain.MainContractorInvoice;
 import pl.company.settlements.invoice.model.MainContractInvoicedAmount;
@@ -14,6 +17,10 @@ import java.util.List;
 public interface MainContractorInvoiceRepository
         extends JpaRepository<MainContractorInvoice, Long>,
         JpaSpecificationExecutor<MainContractorInvoice> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from MainContractorInvoice i where i.id = :id")
+    Optional<MainContractorInvoice> findByIdForUpdate(@Param("id") Long id);
+
 
     boolean existsByMainContract_IdAndInvoiceNumber(
             Long mainContractId,

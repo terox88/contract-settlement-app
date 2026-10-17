@@ -1,0 +1,17 @@
+@import './SubcontractorInvoicesPage.css';
+
+.settlement-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.settlement-add-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; margin: 28px 0; align-items: start; }
+.settlement-panel { padding: 22px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
+.invoice-item > .settlement-panel { margin-top: 20px; }
+.settlement-panel h2 { font-size: 18px; margin: 0 0 18px; }
+.settlement-panel h3, .invoice-finances h3 { font-size: 15px; font-weight: 600; margin: 0 0 18px; }
+.settlement-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.settlement-panel label { display: block; margin: 15px 0 8px; font-size: 13px; color: #374151; }
+.settlement-panel input, .settlement-panel select { display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; background: white; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 14px; }
+.settlement-panel > .main-form-button { margin-top: 16px; }
+.settlement-panel .settlement-actions { margin-top: 16px; }
+.settlement-success { padding: 14px 16px; border-radius: 8px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.settlement-detail-link { display: inline-block; margin-top: 20px; font-size: 14px; }
+.settlement-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 950px) { .settlement-add-grid { grid-template-columns: 1fr; } }

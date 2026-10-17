@@ -27,6 +27,10 @@ import ContractAmendmentFormPage
 import SubcontractFormPage
     from './pages/SubcontractFormPage';
 
+import MainContractorInvoicesPage from './pages/MainContractorInvoicesPage';
+import MainContractorInvoiceFormPage from './pages/MainContractorInvoiceFormPage';
+import MainInvoiceSettlementPage from './pages/MainInvoiceSettlementPage';
+
 import SubcontractorInvoicesPage from './pages/SubcontractorInvoicesPage';
 import SubcontractorInvoiceFormPage from './pages/SubcontractorInvoiceFormPage';
 
@@ -126,6 +130,11 @@ export default function App() {
                 path="/main-contracts/:contractId/subcontracts/:subcontractId/invoices/:invoiceId/edit"
                 element={<SubcontractorInvoiceFormPage />}
             />
+
+            <Route path="/main-contracts/:contractId/invoices" element={<MainContractorInvoicesPage />} />
+            <Route path="/main-contracts/:contractId/invoices/new" element={<MainContractorInvoiceFormPage />} />
+            <Route path="/main-contracts/:contractId/invoices/:mainInvoiceId" element={<MainInvoiceSettlementPage />} />
+            <Route path="/main-contracts/:contractId/invoices/:mainInvoiceId/edit" element={<MainContractorInvoiceFormPage />} />
 
             <Route
                 path="/main-contracts/:contractId"

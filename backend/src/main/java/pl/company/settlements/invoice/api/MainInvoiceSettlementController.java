@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pl.company.settlements.invoice.model.MainInvoiceSettlementCreateRequest;
+import pl.company.settlements.invoice.model.MainInvoiceWithSubcontractorInvoiceRequest;
 import pl.company.settlements.invoice.model.MainInvoiceSettlementResponse;
 import pl.company.settlements.invoice.model.MainInvoiceSettlementUpdateRequest;
 import pl.company.settlements.invoice.service.MainInvoiceSettlementService;
@@ -58,6 +59,13 @@ public class MainInvoiceSettlementController {
             @RequestBody MainInvoiceSettlementCreateRequest request
     ) {
         return service.create(request);
+    }
+
+    @PostMapping("/with-new-invoice")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MainInvoiceSettlementResponse createWithInvoice(
+            @Valid @RequestBody MainInvoiceWithSubcontractorInvoiceRequest request) {
+        return service.createWithInvoice(request);
     }
 
     @PutMapping("/{id}")

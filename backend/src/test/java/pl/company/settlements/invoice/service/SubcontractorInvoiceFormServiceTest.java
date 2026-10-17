@@ -73,7 +73,7 @@ class SubcontractorInvoiceFormServiceTest {
     void existingPaymentAllocationBlocksEditingBeforeMutation() {
         var invoice = invoice();
         invoice.getPaymentAllocations().add(mock(PaymentAllocation.class));
-        when(repository.findById(4L)).thenReturn(Optional.of(invoice));
+        when(repository.findByIdForUpdate(4L)).thenReturn(Optional.of(invoice));
         var request = new SubcontractorInvoiceUpdateRequest();
         request.setNetAmount(new BigDecimal("200.00"));
         request.setVatAmount(new BigDecimal("46.00"));
@@ -102,6 +102,27 @@ class SubcontractorInvoiceFormServiceTest {
         assertEquals(1, response.getDocuments().invoiceFileCount());
         assertEquals(0, response.getDocuments().paymentCount());
         assertTrue(response.getEditBlockedReason().contains("płatności lub potrącenia"));
+    }
+
+    @Test
+    void cannotReduceInvoiceBelowAlreadyAssignedAmount() {
+        var invoice = invoice(); invoice.setCurrency("PLN");
+        when(repository.findByIdForUpdate(4L)).thenReturn(Optional.of(invoice));
+        when(mainInvoiceSettlementRepository.sumBySubcontractorInvoiceId(4L)).thenReturn(new BigDecimal("100"));
+        var request = new SubcontractorInvoiceUpdateRequest();
+        request.setNetAmount(new BigDecimal("90")); request.setVatAmount(BigDecimal.ZERO);
+        request.setGrossAmount(new BigDecimal("90")); request.setCurrency("PLN");
+        assertThrows(IllegalArgumentException.class, () -> service.update(4L, request));
+        assertEquals(new BigDecimal("123.00"), invoice.getGrossAmount());
+        verifyNoInteractions(invoiceDocumentService);
+    }
+
+    @Test
+    void cannotDeleteInvoiceUsedInMainInvoiceSettlement() {
+        when(repository.findByIdForUpdate(4L)).thenReturn(Optional.of(invoice()));
+        when(mainInvoiceSettlementRepository.existsBySubcontractorInvoice_Id(4L)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> service.delete(4L));
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).delete(any(SubcontractorInvoice.class));
     }
 
     private Subcontract subcontract() {

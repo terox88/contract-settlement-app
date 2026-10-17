@@ -9,6 +9,7 @@ import pl.company.settlements.invoice.domain.SubcontractorInvoice;
 import pl.company.settlements.invoice.model.MainInvoiceSettlementCreateRequest;
 import pl.company.settlements.invoice.model.MainInvoiceSettlementResponse;
 import pl.company.settlements.invoice.model.MainInvoiceSettlementUpdateRequest;
+import pl.company.settlements.invoice.model.MainInvoiceWithSubcontractorInvoiceRequest;
 import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository;
 import pl.company.settlements.invoice.repository.MainInvoiceSettlementRepository;
 import pl.company.settlements.invoice.repository.SubcontractorInvoiceRepository;
@@ -20,285 +21,96 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MainInvoiceSettlementService {
-
     private final MainInvoiceSettlementRepository repository;
-
-    private final MainContractorInvoiceRepository
-            mainContractorInvoiceRepository;
-
-    private final SubcontractorInvoiceRepository
-            subcontractorInvoiceRepository;
+    private final MainContractorInvoiceRepository mainContractorInvoiceRepository;
+    private final SubcontractorInvoiceRepository subcontractorInvoiceRepository;
+    private final SubcontractorInvoiceService subcontractorInvoiceService;
 
     public MainInvoiceSettlementResponse getById(Long id) {
-        MainInvoiceSettlement settlement =
-                findEntityById(id);
-
-        return toResponse(settlement);
+        return toResponse(repository.findById(id).orElseThrow(() -> missingAssignment()));
     }
 
-    public List<MainInvoiceSettlementResponse>
-    findAllByMainContractorInvoiceId(
-            Long mainContractorInvoiceId
-    ) {
-        if (!mainContractorInvoiceRepository
-                .existsById(mainContractorInvoiceId)) {
-
-            throw new IllegalArgumentException(
-                    "Main contractor invoice with id "
-                            + mainContractorInvoiceId
-                            + " does not exist"
-            );
+    public List<MainInvoiceSettlementResponse> findAllByMainContractorInvoiceId(Long id) {
+        if (!mainContractorInvoiceRepository.existsById(id)) {
+            throw new IllegalArgumentException("Nie znaleziono faktury GW.");
         }
-
-        return repository
-                .findAllByMainContractorInvoice_IdOrderByIdAsc(
-                        mainContractorInvoiceId
-                )
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return repository.findAllByMainContractorInvoice_IdOrderByIdAsc(id).stream()
+                .map(this::toResponse).toList();
     }
 
-    public List<MainInvoiceSettlementResponse>
-    findAllBySubcontractorInvoiceId(
-            Long subcontractorInvoiceId
-    ) {
-        if (!subcontractorInvoiceRepository
-                .existsById(subcontractorInvoiceId)) {
-
-            throw new IllegalArgumentException(
-                    "Subcontractor invoice with id "
-                            + subcontractorInvoiceId
-                            + " does not exist"
-            );
+    public List<MainInvoiceSettlementResponse> findAllBySubcontractorInvoiceId(Long id) {
+        if (!subcontractorInvoiceRepository.existsById(id)) {
+            throw new IllegalArgumentException("Nie znaleziono faktury podwykonawcy.");
         }
-
-        return repository
-                .findAllBySubcontractorInvoice_IdOrderByIdAsc(
-                        subcontractorInvoiceId
-                )
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return repository.findAllBySubcontractorInvoice_IdOrderByIdAsc(id).stream()
+                .map(this::toResponse).toList();
     }
 
     @Transactional
-    public MainInvoiceSettlementResponse create(
-            MainInvoiceSettlementCreateRequest request
-    ) {
-        MainContractorInvoice mainInvoice =
-                mainContractorInvoiceRepository
-                        .findById(
-                                request.getMainContractorInvoiceId()
-                        )
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Main contractor invoice with id "
-                                                + request
-                                                .getMainContractorInvoiceId()
-                                                + " does not exist"
-                                )
-                        );
+    public MainInvoiceSettlementResponse create(MainInvoiceSettlementCreateRequest request) {
+        // Kolejność blokad dla przypisań: faktura GW, następnie faktura podwykonawcy.
+        MainContractorInvoice main = lockMainInvoice(request.getMainContractorInvoiceId());
+        SubcontractorInvoice sub = lockSubInvoice(request.getSubcontractorInvoiceId());
+        InvoiceAssignmentRules.validateContext(main.getMainContract().getId(),
+                sub.getSubcontract().getMainContract().getId(), main.getCurrency(), sub.getCurrency());
+        if (repository.existsByMainContractorInvoice_IdAndSubcontractorInvoice_Id(main.getId(), sub.getId())) {
+            throw new IllegalArgumentException("Ta faktura jest już przypisana. Użyj zmiany kwoty przypisania.");
+        }
+        InvoiceAssignmentRules.validateAmount(sub.getGrossAmount(),
+                repository.sumBySubcontractorInvoiceId(sub.getId()), request.getSettledAmount());
+        MainInvoiceSettlement settlement = new MainInvoiceSettlement(main, sub);
+        settlement.setSettledAmount(request.getSettledAmount());
+        return toResponse(repository.save(settlement));
+    }
 
-        SubcontractorInvoice subcontractorInvoice =
-                subcontractorInvoiceRepository
-                        .findById(
-                                request.getSubcontractorInvoiceId()
-                        )
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Subcontractor invoice with id "
-                                                + request
-                                                .getSubcontractorInvoiceId()
-                                                + " does not exist"
-                                )
-                        );
-
-        validateInvoicesBelongToSameMainContract(
-                mainInvoice,
-                subcontractorInvoice
-        );
-
-        validateCurrencies(
-                mainInvoice,
-                subcontractorInvoice
-        );
-
-        validatePairUnique(
-                mainInvoice.getId(),
-                subcontractorInvoice.getId()
-        );
-
-        validateSettledAmount(
-                subcontractorInvoice,
-                request.getSettledAmount(),
-                null
-        );
-
-        MainInvoiceSettlement settlement =
-                new MainInvoiceSettlement(
-                        mainInvoice,
-                        subcontractorInvoice
-                );
-
-        settlement.setSettledAmount(
-                request.getSettledAmount()
-        );
-
-        MainInvoiceSettlement savedSettlement =
-                repository.save(settlement);
-
-        return toResponse(savedSettlement);
+    /** Utworzenie faktury i jej przypisanie stanowią jedną transakcję. */
+    @Transactional
+    public MainInvoiceSettlementResponse createWithInvoice(MainInvoiceWithSubcontractorInvoiceRequest request) {
+        lockMainInvoice(request.getMainContractorInvoiceId());
+        var created = subcontractorInvoiceService.create(request.getInvoice());
+        var assignment = new MainInvoiceSettlementCreateRequest();
+        assignment.setMainContractorInvoiceId(request.getMainContractorInvoiceId());
+        assignment.setSubcontractorInvoiceId(created.getId());
+        assignment.setSettledAmount(request.getSettledAmount());
+        return create(assignment);
     }
 
     @Transactional
-    public MainInvoiceSettlementResponse update(
-            Long id,
-            MainInvoiceSettlementUpdateRequest request
-    ) {
-        MainInvoiceSettlement settlement =
-                findEntityById(id);
-
-        validateSettledAmount(
-                settlement.getSubcontractorInvoice(),
-                request.getSettledAmount(),
-                id
-        );
-
-        settlement.setSettledAmount(
-                request.getSettledAmount()
-        );
-
+    public MainInvoiceSettlementResponse update(Long id, MainInvoiceSettlementUpdateRequest request) {
+        // Blokada istniejącego przypisania zabezpiecza równoczesną zmianę i usunięcie.
+        MainInvoiceSettlement settlement = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> missingAssignment());
+        MainContractorInvoice main = lockMainInvoice(settlement.getMainContractorInvoice().getId());
+        SubcontractorInvoice sub = lockSubInvoice(settlement.getSubcontractorInvoice().getId());
+        InvoiceAssignmentRules.validateContext(main.getMainContract().getId(),
+                sub.getSubcontract().getMainContract().getId(), main.getCurrency(), sub.getCurrency());
+        InvoiceAssignmentRules.validateAmount(sub.getGrossAmount(),
+                repository.sumBySubcontractorInvoiceIdExcluding(sub.getId(), id), request.getSettledAmount());
+        settlement.setSettledAmount(request.getSettledAmount());
         return toResponse(settlement);
     }
 
     @Transactional
     public void delete(Long id) {
-        MainInvoiceSettlement settlement =
-                findEntityById(id);
-
+        MainInvoiceSettlement settlement = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> missingAssignment());
+        lockMainInvoice(settlement.getMainContractorInvoice().getId());
+        lockSubInvoice(settlement.getSubcontractorInvoice().getId());
         repository.delete(settlement);
     }
 
-    private MainInvoiceSettlement findEntityById(Long id) {
-        return repository
-                .findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Main invoice settlement with id "
-                                        + id
-                                        + " does not exist"
-                        )
-                );
+    private MainContractorInvoice lockMainInvoice(Long id) {
+        return mainContractorInvoiceRepository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono faktury GW."));
     }
 
-    private void validateInvoicesBelongToSameMainContract(
-            MainContractorInvoice mainInvoice,
-            SubcontractorInvoice subcontractorInvoice
-    ) {
-        Long mainContractId =
-                mainInvoice
-                        .getMainContract()
-                        .getId();
-
-        Long subcontractMainContractId =
-                subcontractorInvoice
-                        .getSubcontract()
-                        .getMainContract()
-                        .getId();
-
-        if (!mainContractId.equals(
-                subcontractMainContractId
-        )) {
-            throw new IllegalArgumentException(
-                    "Subcontractor invoice does not belong "
-                            + "to the same main contract "
-                            + "as the main contractor invoice"
-            );
-        }
+    private SubcontractorInvoice lockSubInvoice(Long id) {
+        return subcontractorInvoiceRepository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono faktury podwykonawcy."));
     }
 
-    private void validateCurrencies(
-            MainContractorInvoice mainInvoice,
-            SubcontractorInvoice subcontractorInvoice
-    ) {
-        if (!mainInvoice
-                .getCurrency()
-                .equalsIgnoreCase(
-                        subcontractorInvoice.getCurrency()
-                )) {
-
-            throw new IllegalArgumentException(
-                    "Invoices must use the same currency"
-            );
-        }
-    }
-
-    private void validatePairUnique(
-            Long mainContractorInvoiceId,
-            Long subcontractorInvoiceId
-    ) {
-        if (repository
-                .existsByMainContractorInvoice_IdAndSubcontractorInvoice_Id(
-                        mainContractorInvoiceId,
-                        subcontractorInvoiceId
-                )) {
-
-            throw new IllegalArgumentException(
-                    "This subcontractor invoice is already assigned "
-                            + "to this main contractor invoice"
-            );
-        }
-    }
-
-    private void validateSettledAmount(
-            SubcontractorInvoice subcontractorInvoice,
-            BigDecimal settledAmount,
-            Long excludedSettlementId
-    ) {
-        if (settledAmount == null
-                || settledAmount.compareTo(
-                BigDecimal.ZERO
-        ) <= 0) {
-
-            throw new IllegalArgumentException(
-                    "Settled amount must be greater than zero"
-            );
-        }
-
-        BigDecimal subcontractorAlreadySettled;
-
-        if (excludedSettlementId == null) {
-
-            subcontractorAlreadySettled =
-                    repository
-                            .sumBySubcontractorInvoiceId(
-                                    subcontractorInvoice.getId()
-                            );
-
-        } else {
-
-            subcontractorAlreadySettled =
-                    repository
-                            .sumBySubcontractorInvoiceIdExcluding(
-                                    subcontractorInvoice.getId(),
-                                    excludedSettlementId
-                            );
-        }
-
-        BigDecimal subcontractorTotal =
-                subcontractorAlreadySettled
-                        .add(settledAmount);
-
-        if (subcontractorTotal.compareTo(
-                subcontractorInvoice.getGrossAmount()
-        ) > 0) {
-
-            throw new IllegalArgumentException(
-                    "Total settled amount cannot exceed "
-                            + "subcontractor invoice gross amount"
-            );
-        }
+    private IllegalArgumentException missingAssignment() {
+        return new IllegalArgumentException("Nie znaleziono przypisania faktury podwykonawcy.");
     }
 
     private MainInvoiceSettlementResponse toResponse(
