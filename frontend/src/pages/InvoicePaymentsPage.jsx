@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import http from '../api/http';
+import DeductionReviewPanel from '../DeductionReviewPanel';
 import InvoiceDocuments from '../InvoiceDocuments';
 import InvoiceAttachmentWorkspace from '../InvoiceAttachmentWorkspace';
 import PaymentAllocationCard from '../PaymentAllocationCard';
@@ -81,7 +82,8 @@ function InvoicePayments({ context, returnMainInvoiceId }) {
                 {total.remaining < 0n && <p className="invoice-warning" role="status">Suma zapłaty i potrąceń przekracza wartość faktury. Sprawdź kwoty rozliczeń.</p>}
                 {subcontract && <p className="invoice-muted">Warunki umowy: zabezpieczenie — {formatDeductionRule(subcontract.performanceSecurityDeduction)}; inne potrącenia — {formatDeductionRule(subcontract.otherDeduction)}.
                     {' '}W tym widoku zapisujesz łączną kwotę potrąceń przy danym rozliczeniu.</p>}
-                {target.type === 'sub' && <><InvoiceDocuments invoice={target.invoice} />
+                {target.type === 'sub' && <><InvoiceDocuments invoice={target.invoice} hideDeductions />
+                    <DeductionReviewPanel invoice={target.invoice} onChange={refreshDocuments} />
                     {target.invoice.statementSettlementMismatch && <p className="invoice-warning">Oświadczenie potwierdza pełne rozliczenie, ale płatności i potrącenia go nie potwierdzają.</p>}</>}
                 <InvoiceAttachmentWorkspace invoice={target.invoice} type={target.type} allocations={rows} onChange={refreshDocuments} />
                 <section className="settlement-panel"><h2>Przypisz istniejący przelew</h2>

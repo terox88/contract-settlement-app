@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { DraftDeductionWarning } from './DeductionReviewPanel';
 import { allocationError, buildAllocationRequest, paymentAvailable } from './utils/paymentForm';
 import { formatInvoiceAmount } from './utils/subcontractorInvoiceForm';
 
@@ -28,6 +29,7 @@ export default function PaymentAllocationEditor({ payment, target, row, disabled
             onChange={(event) => { setDeducted(event.target.value); setError(''); }} />
         <p className="invoice-muted">Dostępne z przelewu: {formatInvoiceAmount(maximum, payment.currency)}. Potrącenie rozlicza część faktury i nie jest kwotą przelewu.</p>
         {target.type === 'main' && <p className="invoice-muted">Dla faktur GW potrącenia w tym module wynoszą 0.</p>}
+        <DraftDeductionWarning target={target} amount={deducted} oldAmount={row?.deductedAmount ?? '0'} />
         {error && <p id={`${prefix}-error`} className="main-form-field-error" role="alert">{error}</p>}
         <div className="settlement-actions"><button className="main-form-button main-form-button-primary">{row ? 'Zapisz rozliczenie' : 'Przypisz przelew'}</button>
             {onCancel && <button type="button" className="main-form-button" onClick={onCancel}>Anuluj</button>}</div>

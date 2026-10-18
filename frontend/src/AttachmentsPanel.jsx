@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import http from './api/http';
+import AttachmentNameEditor from './AttachmentNameEditor';
+import { attachmentTitle, attachmentDownloadName } from './utils/attachmentNames';
 import { attachmentEndpoint, attachmentError, attachmentOwner, attachmentSize, buildAttachmentRequest,
     isPdf, loadAttachmentBlob, readAttachments, readAttachmentTypes, saveAttachmentBlob, validateAttachmentForm } from './utils/attachments';
 import './AttachmentsPanel.css';
@@ -39,7 +41,7 @@ function Panel({ ownerType, ownerId, title = 'Załączniki', onChange, readOnly 
         busyRef.current = true; setBusy(true); setActionError(''); setSuccess('');
         try {
             if (request.method === 'delete') await http.delete(request.url);
-            else await http.post(request.url, request.data, request.config);
+            else await http[request.method ?? 'post'](request.url, request.data, request.config);
             if (!alive.current) { await changed(); return; }
             setSuccess(message); setRemoving(null); setReset((value) => value + 1);
             if (request.method === 'delete') setPreview(null);
@@ -57,9 +59,9 @@ function Panel({ ownerType, ownerId, title = 'Załączniki', onChange, readOnly 
         try {
             const blob = await loadAttachmentBlob(http, item);
             if (!alive.current) return;
-            if (display) setPreview({ id: item.id, name: item.originalFilename,
+            if (display) setPreview({ id: item.id, name: attachmentTitle(item),
                 url: URL.createObjectURL(new Blob([blob], { type: 'application/pdf' })) });
-            else saveAttachmentBlob(blob, item.originalFilename);
+            else saveAttachmentBlob(blob, attachmentDownloadName(item));
         } catch (failure) { if (alive.current) setActionError(failure.message); }
         finally { busyRef.current = false; if (alive.current) setBusy(false); }
     }
@@ -71,19 +73,21 @@ function Panel({ ownerType, ownerId, title = 'Załączniki', onChange, readOnly 
         {loading ? <p role="status">Ładowanie dokumentów...</p> : error ? <div className="error-message" role="alert">{error}
             <button type="button" className="retry-button" disabled={busy} onClick={() => setAttempt((value) => value + 1)}>Spróbuj ponownie</button></div> : <>
             {!items.length && <p className="attachments-muted">Nie dodano jeszcze plików.</p>}
-            <ul className="attachments-list">{items.map((item) => <li key={item.id}>
-                <div><strong className="attachments-filename">{item.originalFilename}</strong>
+            <ul className="attachments-list">{items.map((item) => <li key={`${item.id}-${item.metadataVersion ?? 0}`}>
+                <div><strong className="attachments-filename">{attachmentTitle(item)}</strong>
+                    {attachmentTitle(item) !== item.originalFilename && <p className="attachments-muted">Plik źródłowy: {item.originalFilename}</p>}
                     <p className="attachments-muted">{item.typeLabel || types.find((type) => type.value === item.type)?.label || item.type}
                         {item.size != null && ` · ${attachmentSize(item.size)}`}</p>
                     {item.description && <p className="attachments-description">{item.description}</p>}</div>
                 <div className="attachments-actions">
                     {isPdf(item) && <button type="button" className="main-form-button" disabled={busy} onClick={() => open(item, true)} aria-label={`Podgląd ${item.originalFilename}`}>Podgląd PDF</button>}
                     <button type="button" className="main-form-button" disabled={busy} onClick={() => open(item, false)} aria-label={`Pobierz ${item.originalFilename}`}>Pobierz</button>
+                    {!readOnly && <AttachmentNameEditor item={item} disabled={busy} onSave={mutate} />}
                     {!readOnly && <button type="button" className="main-form-button" disabled={busy} onClick={() => setRemoving(item)} aria-label={`Usuń ${item.originalFilename}`}>Usuń</button>}
                 </div>
             </li>)}</ul>
             {removing && <div className="attachments-confirm" role="group" aria-label="Potwierdzenie usunięcia">
-                <p>Usunąć załącznik „{removing.originalFilename}”? Plik zostanie usunięty z systemu.</p>
+                <p>Usunąć załącznik „{attachmentTitle(removing)}”? Plik zostanie usunięty z systemu.</p>
                 <div className="attachments-actions"><button type="button" className="main-form-button" disabled={busy}
                     onClick={() => mutate({ method: 'delete', url: `/attachments/${removing.id}` }, 'Usunięto załącznik.')}>Usuń załącznik</button>
                     <button type="button" className="main-form-button" disabled={busy} onClick={() => setRemoving(null)}>Anuluj</button></div>

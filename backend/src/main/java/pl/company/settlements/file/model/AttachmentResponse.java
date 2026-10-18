@@ -22,6 +22,10 @@ public class AttachmentResponse {
 
     private String originalFilename;
 
+    private String displayName;
+
+    private long metadataVersion;
+
     private String contentType;
 
     private Long size;

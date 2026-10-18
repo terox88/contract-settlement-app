@@ -346,6 +346,7 @@ public class SubcontractorInvoiceService {
                 hasStatement && !settled;
 
         return SubcontractorInvoiceResponse.builder()
+                .deductionReview(DeductionReviewService.describe(invoice, paidAmount, deductedAmount, documentState != null && documentState.hasPaymentAllocations()))
                 .parentSubcontractId(invoice.getSubcontract().getParentSubcontract() == null ? null : invoice.getSubcontract().getParentSubcontract().getId())
                 .payerContractorId(invoice.getSubcontract().getPayerContractor() == null ? null : invoice.getSubcontract().getPayerContractor().getId())
                 .documents(documentState.summary())

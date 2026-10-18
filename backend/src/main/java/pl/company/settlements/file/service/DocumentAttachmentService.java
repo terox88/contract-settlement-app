@@ -471,7 +471,7 @@ public class DocumentAttachmentService {
                 fileStorageService.load(
                         storedFile.getStorageKey()
                 ),
-                storedFile.getOriginalFilename(),
+                AttachmentNames.downloadName(attachment.getDisplayName(), storedFile.getOriginalFilename()),
                 storedFile.getContentType(),
                 storedFile.getSize()
         );
@@ -938,7 +938,7 @@ public class DocumentAttachmentService {
                 .toList();
     }
 
-    private AttachmentResponse toResponse(
+    public AttachmentResponse toResponse(
             DocumentAttachment attachment
     ) {
 
@@ -946,6 +946,8 @@ public class DocumentAttachmentService {
                 attachment.getStoredFile();
 
         return AttachmentResponse.builder()
+                .displayName(attachment.getDisplayName() == null ? storedFile.getOriginalFilename() : attachment.getDisplayName())
+                .metadataVersion(attachment.getMetadataVersion())
                 .typeLabel(attachment.getType().getLabel())
                 .id(
                         attachment.getId()

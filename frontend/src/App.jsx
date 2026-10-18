@@ -28,6 +28,7 @@ import SubcontractFormPage
     from './pages/SubcontractFormPage';
 
 import SubcontractDetailsPage from './pages/SubcontractDetailsPage';
+import ContractAttachmentsPage from './pages/ContractAttachmentsPage';
 import PaymentsPage from './pages/PaymentsPage';
 import PaymentFormPage from './pages/PaymentFormPage';
 import PaymentDetailsPage from './pages/PaymentDetailsPage';
@@ -43,6 +44,7 @@ import SubcontractorInvoiceFormPage from './pages/SubcontractorInvoiceFormPage';
 export default function App() {
     return (
         <Routes>
+            <Route path="/main-contracts/:contractId/attachments" element={<ContractAttachmentsPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId" element={<SubcontractDetailsPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:parentSubcontractId/children/new" element={<SubcontractFormPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId/amendments/new" element={<ContractAmendmentFormPage />} />

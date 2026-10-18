@@ -1,6 +1,7 @@
 package pl.company.settlements.contract.model;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -18,6 +19,7 @@ public class ContractPenaltyUpdateRequest {
 
     @NotNull
     @Positive
+    @Digits(integer = 13, fraction = 2)
     private BigDecimal amount;
 
     @Size(max = 1000)

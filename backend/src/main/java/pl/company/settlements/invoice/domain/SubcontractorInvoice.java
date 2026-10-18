@@ -9,6 +9,7 @@ import pl.company.settlements.file.domain.DocumentAttachment;
 import pl.company.settlements.payment.domain.PaymentAllocation;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -20,6 +21,11 @@ import java.util.Set;
 @Entity
 @Table(name = "subcontractor_invoice")
 public class SubcontractorInvoice extends Invoice {
+    @Column(name = "deduction_confirmed_fingerprint", length = 64)
+    private String deductionConfirmedFingerprint;
+    @Column(name = "deduction_confirmed_at")
+    private Instant deductionConfirmedAt;
+
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "subcontract_id", nullable = false)

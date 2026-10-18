@@ -34,6 +34,13 @@ public class DocumentAttachment {
     @Column(length = 1000)
     private String description;
 
+    @Column(name = "display_name", length = 255)
+    private String displayName;
+
+    @Version
+    @Column(name = "metadata_version", nullable = false)
+    private long metadataVersion;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "main_contractor_invoice_id")
     private MainContractorInvoice mainContractorInvoice;

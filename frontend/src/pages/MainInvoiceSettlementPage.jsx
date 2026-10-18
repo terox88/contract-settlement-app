@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import http from '../api/http';
+import MainInvoiceReviewPanel from '../MainInvoiceReviewPanel';
 import InvoiceDocuments from '../InvoiceDocuments';
 import AttachmentDisclosure from '../AttachmentDisclosure';
 import InvoiceAttachmentWorkspace from '../InvoiceAttachmentWorkspace';
@@ -88,6 +89,7 @@ function SettlementPage({ contractId, mainInvoiceId, parentSubcontractId }) {
                     <Metric label="Termin płatności" value={formatAmendmentDate(main.dueDate)} />
                     <Metric label="Stawki VAT" value={main.vatRates.join('; ')} />
                 </dl>
+                {!parentSubcontractId && <MainInvoiceReviewPanel invoiceId={mainInvoiceId} refreshKey={workspace} />}
                 {main.description && <p className="invoice-description">{main.description}</p>}
                 <AttachmentDisclosure title="Dokumenty faktury zleceniodawcy">
                     <InvoiceAttachmentWorkspace invoice={main} type={parentType} onChange={refreshDocuments} />
@@ -100,7 +102,7 @@ function SettlementPage({ contractId, mainInvoiceId, parentSubcontractId }) {
                     <Metric label="Faktury z rozbieżnościami" value={summary.inconsistencies} />
                 </dl><p className="invoice-muted">Kwota przypisana wskazuje zakres tej faktury zleceniodawcy. Zapłata, potrącenia i dokumenty dotyczą całych faktur podwykonawców.</p></section>
                 {summary.exceedsMainInvoice && <p className="invoice-warning" role="status">Suma przypisań przekracza wartość faktury zleceniodawcy. Sprawdź zakres rozliczenia.</p>}
-                {!workspace.rows.length && <p className="invoice-warning">Nie przypisano jeszcze faktur podwykonawców. Nie można na tej podstawie potwierdzić kompletności rozliczenia.</p>}
+                {!workspace.rows.length && <p className="invoice-warning">Nie przypisano faktur podwykonawców. Sprawdź, czy są wymagane w tym rozliczeniu.</p>}
 
                 <div className="settlement-add-grid">
                     <section className="settlement-panel"><h2>Przypisz istniejącą fakturę</h2>

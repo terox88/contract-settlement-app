@@ -11,6 +11,7 @@ import {
 import http from '../api/http';
 
 import FinancialLimitsCard from '../FinancialLimitsCard';
+import ContractPenaltiesCard from '../ContractPenaltiesCard';
 import AttachmentDisclosure from '../AttachmentDisclosure';
 import ContractAmendmentsCard from '../ContractAmendmentsCard';
 import SubcontractsCard from '../SubcontractsCard';
@@ -53,6 +54,12 @@ export default function MainContractDetailsPage() {
     useEffect(() => {
         loadContract();
     }, [contractId]);
+
+    async function refreshContract() {
+        const { data } = await http.get(`/main-contracts/${contractId}`);
+        if (String(data?.id) !== String(contractId)) throw new Error('Nie można odświeżyć umowy.');
+        setContract(data);
+    }
 
     async function loadContract() {
         try {
@@ -352,12 +359,7 @@ export default function MainContractDetailsPage() {
 
                 <FinancialLimitsCard contract={contract} />
 
-                <SectionCard
-                    title="Kary umowne"
-                    description={
-                        'Nałożone kary i ich łączna wartość.'
-                    }
-                />
+                <ContractPenaltiesCard key={contract.id} contract={contract} onChange={refreshContract} />
 
                 <section className="card">
                     <h2>Faktury GW</h2>
@@ -365,12 +367,10 @@ export default function MainContractDetailsPage() {
                     <Link className="main-form-button" to={`/main-contracts/${contract.id}/invoices`}>Przejdź do faktur GW</Link>
                 </section>
 
-                <SectionCard
-                    title="Załączniki"
-                    description={
-                        'Umowa, aneksy, protokoły i pozostałe dokumenty.'
-                    }
-                />
+                <section className="card"><h2>Wszystkie dokumenty umowy</h2>
+                    <p>Umowa i aneksy, faktury, oświadczenia oraz potwierdzenia przelewów wszystkich szczebli podwykonawstwa.</p>
+                    <Link className="main-form-button" to={`/main-contracts/${contract.id}/attachments`}>Otwórz dokumenty i eksport ZIP</Link>
+                </section>
 
             </div>
         </>

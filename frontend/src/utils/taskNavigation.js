@@ -83,6 +83,7 @@ export async function resolveTaskNavigation(http, url, signal) {
         const base = `/main-contracts/${contractId}`;
         crumbs.push({ title: task.taskNumber || `Zadanie ${task.id}`, url: `/tasks/${task.id}` },
             { title: `Umowa ${main.contractNumber || contractId}`, url: base });
+        if (rest[0] === 'attachments') crumbs.push({ title: 'Dokumenty umowy', url: parsed.pathname });
         if (rest[0] === 'edit') crumbs.push({ title: 'Edycja umowy', url: parsed.pathname });
         if (rest[0] === 'amendments') crumbs.push({ title: rest[1] === 'new' ? 'Nowy aneks' : 'Edycja aneksu', url: parsed.pathname });
         if (rest[0] === 'invoices') {

@@ -113,6 +113,12 @@ public class ContractPenaltyService {
         return toResponse(penalty);
     }
 
+    @Transactional
+    public void delete(Long id) {
+        ContractPenalty penalty = findEntityById(id);
+        penaltyRepository.delete(penalty);
+    }
+
     private ContractPenalty findEntityById(Long id) {
         return penaltyRepository
                 .findById(id)
@@ -146,6 +152,7 @@ public class ContractPenaltyService {
             Contract contract,
             LocalDate imposedDate
     ) {
+        if (imposedDate == null) throw new IllegalArgumentException("Podaj datę nałożenia kary.");
         if (imposedDate.isBefore(
                 contract.getContractDate()
         )) {
@@ -160,7 +167,9 @@ public class ContractPenaltyService {
             BigDecimal amount
     ) {
         if (amount == null
-                || amount.compareTo(BigDecimal.ZERO) <= 0) {
+                || amount.compareTo(BigDecimal.ZERO) <= 0
+                || amount.stripTrailingZeros().scale() > 2
+                || amount.compareTo(new BigDecimal("9999999999999.99")) > 0) {
 
             throw new IllegalArgumentException(
                     "Penalty amount must be greater than zero"

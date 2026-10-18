@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import http from '../api/http';
+import { DraftDeductionWarning } from '../DeductionReviewPanel';
 import PaymentFields from '../PaymentFields';
 import PaymentInvoicePicker from '../PaymentInvoicePicker';
 import { InvoiceField } from '../InvoiceFields';
@@ -110,6 +111,7 @@ function PaymentForm({ paymentId, context, contextError, query }) {
                                 <InvoiceField name={`deducted-${row.key}`} label="Potrącenia przy tym rozliczeniu" required inputMode="decimal" value={row.deductedAmount}
                                     readOnly={row.target.type === 'main'} onChange={(value) => changeRow(row.key, 'deductedAmount', value)} />
                             </div>
+                            <DraftDeductionWarning target={row.target} amount={row.deductedAmount} />
                             <button className="main-form-button" type="button" onClick={() => setRows((current) => current.filter((value) => value.key !== row.key))}>Usuń pozycję</button>
                         </div>)}
                         <div className="settlement-panel"><PaymentInvoicePicker currency={form.currency} initialContractId={context?.contractId} scope={rows[0]?.target} excluded={rows.map((row) => targetKey(row.target))}
