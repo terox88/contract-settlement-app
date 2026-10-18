@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import http from '../api/http';
 import InvoiceDocuments from '../InvoiceDocuments';
+import KsefInvoiceImport from '../KsefInvoiceImport';
+import { applyKsefPreview, withKsefXml } from '../utils/ksefImport';
 import InvoiceFields, { InvoiceField } from '../InvoiceFields';
 import { assignmentError, buildInvoiceAndAssignmentRequest, readMainInvoice } from '../utils/mainInvoiceSettlement';
 import { buildInvoiceRequest, calculatedGross, emptyInvoice, invoiceToForm, readInvoice, validateInvoiceForm } from '../utils/subcontractorInvoiceForm';
@@ -36,6 +38,8 @@ function InvoiceForm({ contractId, subcontractId, invoiceId, mainInvoiceId, pare
     const [errors, setErrors] = useState({});
     const [saveError, setSaveError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [xmlFile, setXmlFile] = useState(null);
+    const [importing, setImporting] = useState(false);
     const formRef = useRef(null);
     const savingRef = useRef(false);
     const mountedRef = useRef(false);
@@ -88,7 +92,7 @@ function InvoiceForm({ contractId, subcontractId, invoiceId, mainInvoiceId, pare
 
     async function handleSubmit(event) {
         event.preventDefault();
-        if (savingRef.current || loading || loadError || !subcontract || !editable) return;
+        if (savingRef.current || importing || loading || loadError || !subcontract || !editable) return;
         const validation = validateInvoiceForm(form);
         if (mainInvoiceId) {
             if (!mainInvoice) return;
@@ -106,10 +110,11 @@ function InvoiceForm({ contractId, subcontractId, invoiceId, mainInvoiceId, pare
         savingRef.current = true;
         setSaving(true);
         try {
-            const request = mainInvoiceId
+            const invoiceRequest = mainInvoiceId
                 ? buildInvoiceAndAssignmentRequest(mainInvoiceId, subcontractId, form, assignFull ? calculatedGross(form).amount : assignmentAmount, parentSubcontractId ? 'sub' : 'main')
                 : buildInvoiceRequest(subcontractId, invoiceId, form);
-            await http[request.method](request.url, request.data);
+            const request = withKsefXml(invoiceRequest, xmlFile);
+            await http[request.method](request.url, request.data, request.config);
             if (mountedRef.current) navigate(returnPath, { replace: true });
         } catch (failure) {
             if (mountedRef.current) setSaveError(failure.message);
@@ -136,11 +141,15 @@ function InvoiceForm({ contractId, subcontractId, invoiceId, mainInvoiceId, pare
                         || 'Nie można potwierdzić możliwości edycji tej faktury. Odśwież dane.'}</p>}
                     <form ref={formRef} onSubmit={handleSubmit} noValidate>
                         {saveError && <div className="error-message main-form-alert" role="alert">{saveError}</div>}
-                        <fieldset className="main-form-section" disabled={saving || !editable}>
+                        {editable && <KsefInvoiceImport expectedTaxId={subcontract?.subcontractorTaxId} disabled={saving} onBusyChange={setImporting}
+                            onApply={(preview, file) => { setForm((current) => applyKsefPreview(current, preview)); setXmlFile(file); setErrors({}); setSaveError(''); }} />}
+                        {xmlFile && <p className="ksef-applied" role="status">Przy zapisie zostanie dołączony XML: {xmlFile.name}.
+                            <button type="button" className="main-form-button" disabled={saving || importing} onClick={() => setXmlFile(null)}>Odłącz plik XML</button></p>}
+                        <fieldset className="main-form-section" disabled={saving || importing || !editable}>
                             <legend>Dane faktury</legend>
                             <InvoiceFields form={form} errors={errors} change={change} />
                         </fieldset>
-                        {mainInvoice && <fieldset className="main-form-section" disabled={saving}>
+                        {mainInvoice && <fieldset className="main-form-section" disabled={saving || importing}>
                             <legend>Przypisanie do faktury zleceniodawcy {mainInvoice.invoiceNumber}</legend>
                             <label className="invoice-filter-check"><input type="checkbox" checked={assignFull}
                                 onChange={(event) => { setAssignFull(event.target.checked); setErrors((current) => ({ ...current, assignmentAmount: '' })); }} /> Przypisz całą wartość brutto</label>
@@ -152,13 +161,13 @@ function InvoiceForm({ contractId, subcontractId, invoiceId, mainInvoiceId, pare
                         {isEditing ? <InvoiceDocuments invoice={savedInvoice} /> : <section className="invoice-document-note">
                             <h2>Dokumenty tej faktury</h2>
                             <p>Na liście faktur zobaczysz osobno plik faktury (PDF/XML), plik oświadczenia oraz potwierdzenia powiązanych przelewów.</p>
-                            <p>Po zapisaniu otwórz dokumenty tej faktury na liście albo w płatnościach, aby dołączyć pliki.</p>
+                            <p>{xmlFile ? "Wybrany XML zostanie dołączony razem z zapisem faktury. Pozostałe pliki dodasz w dokumentach faktury." : "Po zapisaniu otwórz dokumenty tej faktury na liście albo w płatnościach, aby dołączyć pliki."}</p>
                         </section>}
                         <div className="main-form-footer">
-                            {editable && <button type="submit" className="main-form-button main-form-button-primary" disabled={saving}>
+                            {editable && <button type="submit" className="main-form-button main-form-button-primary" disabled={saving || importing}>
                                 {saving ? 'Zapisywanie...' : isEditing ? 'Zapisz zmiany' : mainInvoiceId ? 'Zapisz fakturę i przypisz' : 'Dodaj fakturę'}
                             </button>}
-                            <button type="button" className="main-form-button" disabled={saving} onClick={() => navigate(returnPath)}>
+                            <button type="button" className="main-form-button" disabled={saving || importing} onClick={() => navigate(returnPath)}>
                                 {editable ? 'Anuluj' : 'Wróć do listy'}
                             </button>
                             <span className="main-form-hint" role="status">{saving ? 'Trwa zapisywanie faktury.' : ''}</span>

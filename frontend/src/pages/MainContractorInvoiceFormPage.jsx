@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import http from '../api/http';
 import InvoiceFields from '../InvoiceFields';
+import KsefInvoiceImport from '../KsefInvoiceImport';
+import { applyKsefPreview, withKsefXml } from '../utils/ksefImport';
 import { emptyInvoice, invoiceToForm, validateInvoiceForm } from '../utils/subcontractorInvoiceForm';
 import { buildMainInvoiceRequest, readMainInvoice } from '../utils/mainInvoiceSettlement';
 import './MainContractFormPage.css';
@@ -24,6 +26,8 @@ function MainInvoiceForm({ contractId, mainInvoiceId }) {
     const [errors, setErrors] = useState({});
     const [saveError, setSaveError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [xmlFile, setXmlFile] = useState(null);
+    const [importing, setImporting] = useState(false);
     const busyRef = useRef(false);
     const aliveRef = useRef(false);
     const formRef = useRef(null);
@@ -51,15 +55,15 @@ function MainInvoiceForm({ contractId, mainInvoiceId }) {
     }
     async function save(event) {
         event.preventDefault();
-        if (busyRef.current || loading || loadError || !contract) return;
+        if (busyRef.current || importing || loading || loadError || !contract) return;
         const validation = validateInvoiceForm(form);
         setErrors(validation); setSaveError('');
         const first = Object.keys(validation)[0];
         if (first) { formRef.current?.elements.namedItem(first)?.focus(); return; }
         busyRef.current = true; setSaving(true);
         try {
-            const request = buildMainInvoiceRequest(contractId, mainInvoiceId, form);
-            const response = await http[request.method](request.url, request.data);
+            const request = withKsefXml(buildMainInvoiceRequest(contractId, mainInvoiceId, form), xmlFile);
+            const response = await http[request.method](request.url, request.data, request.config);
             // Po udanym zapisie bez identyfikatora wracamy do listy, aby nie ponowić POST.
             if (aliveRef.current) navigate(response.data?.id ? `${base}/${response.data.id}` : base, { replace: true });
         } catch (failure) { if (aliveRef.current) setSaveError(failure.message); }
@@ -73,13 +77,17 @@ function MainInvoiceForm({ contractId, mainInvoiceId }) {
         </div>{loading ? <p role="status">Ładowanie danych...</p> : loadError ? <div className="error-message" role="alert">{loadError}
             <button className="retry-button" onClick={() => setAttempt((value) => value + 1)}>Spróbuj ponownie</button></div> : <form ref={formRef} onSubmit={save} noValidate>
             {saveError && <p className="error-message" role="alert">{saveError}</p>}
-            <fieldset className="main-form-section" disabled={saving}><legend>Dane faktury GW</legend>
+            <KsefInvoiceImport expectedTaxId={contract?.mainContractorTaxId} disabled={saving} onBusyChange={setImporting}
+                onApply={(preview, file) => { setForm((current) => applyKsefPreview(current, preview)); setXmlFile(file); setErrors({}); setSaveError(''); }} />
+            {xmlFile && <p className="ksef-applied" role="status">Przy zapisie zostanie dołączony XML: {xmlFile.name}.
+                <button type="button" className="main-form-button" disabled={saving || importing} onClick={() => setXmlFile(null)}>Odłącz plik XML</button></p>}
+            <fieldset className="main-form-section" disabled={saving || importing}><legend>Dane faktury GW</legend>
                 <InvoiceFields form={form} errors={errors} change={change} />
             </fieldset>
             <p className="invoice-muted">Po zapisaniu faktury przejdziesz do przypisywania faktur podwykonawców i weryfikacji ich rozliczeń.</p>
-            <div className="main-form-footer"><button className="main-form-button main-form-button-primary" disabled={saving}>
+            <div className="main-form-footer"><button className="main-form-button main-form-button-primary" disabled={saving || importing}>
                 {saving ? 'Zapisywanie...' : 'Zapisz fakturę GW'}</button>
-                <button type="button" className="main-form-button" disabled={saving} onClick={() => navigate(returnPath)}>Anuluj</button>
+                <button type="button" className="main-form-button" disabled={saving || importing} onClick={() => navigate(returnPath)}>Anuluj</button>
             </div>
         </form>}</section>
     </>;
