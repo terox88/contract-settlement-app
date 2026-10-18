@@ -17,6 +17,8 @@ public class SubcontractFilter {
 
     private Long subcontractorId;
     private Long mainContractId;
+    private Long parentSubcontractId;
+    private Boolean directOnly;
     private Long investmentTaskId;
 
     private ContractType contractType;

@@ -18,7 +18,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -107,6 +106,7 @@ public class LocalFileStorageService
 
         } catch (IOException exception) {
 
+            deletePhysicalFileQuietly(targetPath);
             throw new IllegalStateException(
                     "Could not store file "
                             + cleanedFilename,
@@ -219,6 +219,14 @@ public class LocalFileStorageService
              * the deletion before the physical file is removed.
              */
             storedFileRepository.flush();
+        }
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() { deletePhysicalFileQuietly(filePath); }
+            });
+            return;
         }
 
         try {

@@ -49,7 +49,7 @@ public final class ContractHierarchyRules {
         }
         if (subcontract.contractDate().isBefore(main.contractDate())) {
             throw new IllegalArgumentException("Data zawarcia umowy podwykonawczej nie może poprzedzać "
-                    + "daty zawarcia umowy głównej (" + main.contractDate() + ").");
+                    + "daty zawarcia umowy zleceniodawcy (" + main.contractDate() + ").");
         }
         if (subcontract.endDate().isBefore(subcontract.contractDate())) {
             throw new IllegalArgumentException("Data zakończenia umowy podwykonawczej nie może poprzedzać jej zawarcia.");
@@ -64,7 +64,7 @@ public final class ContractHierarchyRules {
         BigDecimal total = subcontractsTotalValue(subcontracts);
         if (total.compareTo(main.value()) > 0) {
             throw new IllegalArgumentException("Suma aktualnych wartości brutto umów podwykonawczych ("
-                    + total.toPlainString() + " PLN) nie może przekraczać aktualnej wartości umowy głównej ("
+                    + total.toPlainString() + " PLN) nie może przekraczać aktualnej wartości umowy zleceniodawcy ("
                     + main.value().toPlainString() + " PLN). Przekroczenie: "
                     + total.subtract(main.value()).toPlainString() + " PLN.");
         }
@@ -79,7 +79,7 @@ public final class ContractHierarchyRules {
         String subTaxId = normalizeTaxId(subcontractorTaxId);
         if ((main.contractorId() != null && Objects.equals(main.contractorId(), subcontractorId))
                 || (!mainTaxId.isEmpty() && mainTaxId.equals(subTaxId))) {
-            throw new IllegalArgumentException("Wykonawca umowy głównej nie może być jej podwykonawcą.");
+            throw new IllegalArgumentException("Wykonawca umowy zleceniodawcy nie może być jej podwykonawcą.");
         }
     }
 

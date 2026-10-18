@@ -134,6 +134,10 @@ public class SubcontractorStatementService {
         SubcontractorStatement statement =
                 findEntityById(id);
 
+        if (!statement.getAttachments().isEmpty()) {
+            throw new IllegalStateException("Przed usunięciem oświadczenia usuń jego załączniki.");
+        }
+
         SubcontractorInvoice invoice =
                 statement.getSubcontractorInvoice();
 

@@ -5,7 +5,7 @@ import { allocationError, buildAllocationRequest, buildPaymentRequest, contextFr
     validatePaymentAllocations, validatePaymentForm } from '../src/utils/paymentForm.js';
 
 const form = { ...emptyPayment(), paymentDate: '2026-10-17', amount: '100,00', currency: 'pln', bankReference: ' REF/1 ' };
-const target = { type: 'sub', id: 40, contractId: 7, subcontractId: 21, currency: 'PLN', number: 'PW/1', grossAmount: '105' };
+const target = { recipientContractorId: 12, payerContractorId: 4, type: 'sub', id: 40, contractId: 7, subcontractId: 21, currency: 'PLN', number: 'PW/1', grossAmount: '105' };
 const payment = { id: 8, paymentDate: '2026-10-17', amount: '100', currency: 'PLN', allocatedAmount: '60', unallocatedAmount: '40', allocationCount: 1 };
 const row = { id: 3, paymentId: 8, paymentDate: '2026-10-17', paymentCurrency: 'PLN', paymentAmount: '100', remainingPaymentAmount: '40',
     allocatedAmount: '60', deductedAmount: '5', subcontractorInvoiceId: 40, invoiceGrossAmount: '105', invoicePaidAmount: '60', invoiceDeductedAmount: '5', invoiceRemainingAmount: '40' };

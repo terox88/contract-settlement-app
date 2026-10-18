@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.repository.MainContractRepository;
+import pl.company.settlements.contract.service.ContractHierarchyValidationService;
+import pl.company.settlements.contract.service.ContractSettlementValidationService;
 import pl.company.settlements.invoice.domain.MainContractorInvoice;
 import pl.company.settlements.invoice.model.MainContractorInvoiceCreateRequest;
 import pl.company.settlements.invoice.model.MainContractorInvoiceResponse;
@@ -25,6 +27,8 @@ public class MainContractorInvoiceService {
     private final MainContractorInvoiceRepository repository;
     private final MainContractRepository mainContractRepository;
     private final MainInvoiceSettlementRepository settlementRepository;
+    private final ContractHierarchyValidationService hierarchyValidationService;
+    private final ContractSettlementValidationService settlementValidationService;
 
     public MainContractorInvoiceResponse getById(
             Long id
@@ -61,16 +65,7 @@ public class MainContractorInvoiceService {
     public MainContractorInvoiceResponse create(
             MainContractorInvoiceCreateRequest request
     ) {
-        MainContract mainContract =
-                mainContractRepository
-                        .findById(request.getMainContractId())
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Main contract with id "
-                                                + request.getMainContractId()
-                                                + " does not exist"
-                                )
-                        );
+        MainContract mainContract = hierarchyValidationService.lockMainContract(request.getMainContractId());
 
         String invoiceNumber =
                 normalizeInvoiceNumber(
@@ -82,6 +77,9 @@ public class MainContractorInvoiceService {
                 invoiceNumber,
                 null
         );
+
+        settlementValidationService.validateInvoice(mainContract, BigDecimal.ZERO,
+                request.getGrossAmount(), request.getCurrency());
 
         MainContractorInvoice invoice =
                 new MainContractorInvoice(
@@ -113,6 +111,9 @@ public class MainContractorInvoiceService {
             Long id,
             MainContractorInvoiceUpdateRequest request
     ) {
+        Long mainContractId = repository.findMainContractIdById(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono faktury GW."));
+        hierarchyValidationService.lockMainContract(mainContractId);
         MainContractorInvoice invoice =
                 repository.findByIdForUpdate(id).orElseThrow(() ->
                         new IllegalArgumentException("Nie znaleziono faktury GW."));
@@ -132,6 +133,10 @@ public class MainContractorInvoiceService {
                 invoiceNumber,
                 id
         );
+
+        settlementValidationService.validateInvoiceReduction(invoice, request.getGrossAmount());
+        settlementValidationService.validateInvoice(invoice.getMainContract(), invoice.getGrossAmount(),
+                request.getGrossAmount(), request.getCurrency());
 
         applyInvoiceData(
                 invoice,

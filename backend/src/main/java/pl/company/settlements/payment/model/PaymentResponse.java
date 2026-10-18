@@ -11,6 +11,10 @@ import java.time.LocalDate;
 public class PaymentResponse {
 
     private Long id;
+    private Long recipientContractorId;
+    private Long payerContractorId;
+    private Boolean mainInvoicePayment;
+    private boolean mixedRecipients;
 
     private LocalDate paymentDate;
 

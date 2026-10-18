@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,11 @@ public class PaymentWorkflowService {
         if (total.compareTo(request.getPayment().getAmount()) > 0) {
             throw new IllegalArgumentException("Suma przypisań przekracza wartość przelewu.");
         }
+        // Wszystkie umowy blokujemy w jednej kolejności, także gdy przelew obejmuje kilka umów tej samej firmy.
+        allocationService.lockInvoiceContracts(request.getAllocations().stream()
+                        .map(PaymentWithAllocationsRequest.Allocation::getMainContractorInvoiceId).filter(Objects::nonNull).toList(),
+                request.getAllocations().stream()
+                        .map(PaymentWithAllocationsRequest.Allocation::getSubcontractorInvoiceId).filter(Objects::nonNull).toList());
         var payment = paymentService.create(request.getPayment());
         // Wszystkie faktury GW przed podwykonawczymi; w ramach typu rosnące ID.
         // Kolejność zgodna z blokadami przy przypisywaniu faktur do rozliczeń GW.

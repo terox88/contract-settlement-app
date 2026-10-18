@@ -62,7 +62,8 @@ function PaymentForm({ paymentId, context, contextError, query }) {
     }, [paymentId, attempt]);
     function change(name, value) {
         setForm((current) => ({ ...current, [name]: value }));
-        setErrors((current) => ({ ...current, [name]: '' })); setSaveError('');
+        if (name === 'amount') setRows((current) => current.length === 1 ? current.map((row) => ({ ...row, allocatedAmount: value })) : current);
+        setErrors((current) => ({ ...current, [name]: '', allocations: '' })); setSaveError('');
     }
     function changeRow(key, name, value) {
         setRows((current) => current.map((row) => row.key === key ? { ...row, [name]: value } : row));
@@ -88,32 +89,32 @@ function PaymentForm({ paymentId, context, contextError, query }) {
     return <>
         {!saving && <Link className="back-link" to={returnPath}>← {paymentId ? 'Szczegóły przelewu' : 'Przelewy'}</Link>}
         <section className="card main-form-card"><div className="main-form-heading"><h1>{paymentId ? 'Edytuj przelew' : 'Dodaj przelew'}</h1>
-            <p>Pola oznaczone * są wymagane. Datą rozliczenia jest data przelewu.</p></div>
+            <p>Podaj datę i kwotę z potwierdzenia otrzymanego od zleceniodawcy. Pola oznaczone * są wymagane.</p></div>
             {loading ? <p role="status">Ładowanie danych...</p> : loadError ? <div className="error-message" role="alert">{loadError}
                 <button className="retry-button" onClick={() => setAttempt((value) => value + 1)}>Spróbuj ponownie</button></div> : <>
                 <form onSubmit={save} ref={formRef} noValidate>
                     {saveError && <p className="error-message" role="alert">{saveError}</p>}
-                    <fieldset className="main-form-section" disabled={saving}><legend>Dane przelewu</legend>
-                        <PaymentFields form={form} errors={errors} change={change} currencyLocked={savedPayment?.allocationCount > 0} />
+                    <fieldset className="main-form-section" disabled={saving}><legend>Dane z potwierdzenia przelewu</legend>
+                        <PaymentFields form={form} errors={errors} change={change} currencyLocked={savedPayment?.allocationCount > 0 || rows.length > 0} />
                     </fieldset>
                     {paymentId ? <p className="invoice-muted">Przypisano do faktur: {formatInvoiceAmount(savedPayment.allocatedAmount, savedPayment.currency)}. Kwoty i potrącenia poszczególnych faktur zmienisz w szczegółach przelewu.</p> : <fieldset className="main-form-section" disabled={saving}>
                         <legend>Faktury rozliczane tym przelewem</legend>
-                        <p className="invoice-muted">Możesz wskazać kilka faktur. Suma kwot przelewu przypisanych do faktur nie może przekroczyć wartości przelewu. Potrącenia są zapisywane osobno.</p>
+                        <p className="invoice-muted">Możesz wskazać kilka faktur tego samego odbiorcy i zleceniodawcy. Suma kwot przelewu przypisanych do faktur nie może przekroczyć wartości przelewu. Potrącenia są zapisywane osobno.</p>
                         <p>Przypisano: <strong>{formatInvoiceCents(assigned, form.currency)}</strong></p>
                         {errors.allocations && <p className="main-form-field-error" role="alert">{errors.allocations}</p>}
                         {rows.map((row) => <div className="payment-allocation-row" key={row.key}>
                             <h3>{row.target.type === 'main' ? 'GW' : 'Podwykonawca'} · {row.target.name} · {row.target.number}</h3>
                             <p className="invoice-muted">Pełne brutto faktury: {formatInvoiceAmount(row.target.grossAmount, row.target.currency)}</p>
                             <div className="main-form-grid">
-                                <InvoiceField name={`paid-${row.key}`} label="Kwota z przelewu" required inputMode="decimal" value={row.allocatedAmount} onChange={(value) => changeRow(row.key, 'allocatedAmount', value)} />
+                                {(rows.length > 1 || moneyCents(row.allocatedAmount) !== moneyCents(form.amount)) && <InvoiceField name={`paid-${row.key}`} label="Kwota z przelewu na tę fakturę" required inputMode="decimal" value={row.allocatedAmount} onChange={(value) => changeRow(row.key, 'allocatedAmount', value)} />}
                                 <InvoiceField name={`deducted-${row.key}`} label="Potrącenia przy tym rozliczeniu" required inputMode="decimal" value={row.deductedAmount}
                                     readOnly={row.target.type === 'main'} onChange={(value) => changeRow(row.key, 'deductedAmount', value)} />
                             </div>
                             <button className="main-form-button" type="button" onClick={() => setRows((current) => current.filter((value) => value.key !== row.key))}>Usuń pozycję</button>
                         </div>)}
-                        <div className="settlement-panel"><PaymentInvoicePicker currency={form.currency} initialContractId={context?.contractId} excluded={rows.map((row) => targetKey(row.target))}
+                        <div className="settlement-panel"><PaymentInvoicePicker currency={form.currency} initialContractId={context?.contractId} scope={rows[0]?.target} excluded={rows.map((row) => targetKey(row.target))}
                             disabled={saving || rows.length >= 100} onChoose={(target) => setRows((current) => [...current, {
-                                key: nextKey.current++, target, allocatedAmount: '', deductedAmount: '0',
+                                key: nextKey.current++, target, allocatedAmount: current.length === 0 ? form.amount : '', deductedAmount: '0',
                             }])} /></div>
                         {!rows.length && <p className="invoice-muted">Przelew zostanie zapisany bez przypisań. Faktury można powiązać później.</p>}
                     </fieldset>}

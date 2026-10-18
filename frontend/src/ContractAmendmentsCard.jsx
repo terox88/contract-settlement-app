@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import http from './api/http';
+import AttachmentDisclosure from './AttachmentDisclosure';
 import { formatAmendmentChange, formatAmendmentDate, readAmendmentList } from './utils/contractAmendmentForm';
 import './ContractAmendmentsCard.css';
 
-export default function ContractAmendmentsCard({ contract }) {
+export default function ContractAmendmentsCard({ contract, basePath = `/main-contracts/${contract.id}` }) {
     const contractId = contract.id;
     const [amendments, setAmendments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -30,7 +31,7 @@ export default function ContractAmendmentsCard({ contract }) {
                     <h2>Aneksy</h2>
                     <p>Zmiany umowy w kolejności dat obowiązywania.</p>
                 </div>
-                <Link to={`/main-contracts/${contractId}/amendments/new`} className="main-form-button">
+                <Link to={`${basePath}/amendments/new`} className="main-form-button">
                     Dodaj aneks
                 </Link>
             </div>
@@ -47,7 +48,7 @@ export default function ContractAmendmentsCard({ contract }) {
                                 <article className="amendments-item" key={amendment.id}>
                                     <div className="amendments-item-heading">
                                         <h3>{amendment.amendmentNumber}</h3>
-                                        <Link to={`/main-contracts/${contractId}/amendments/${amendment.id}/edit`}
+                                        <Link to={`${basePath}/amendments/${amendment.id}/edit`}
                                             className="main-form-button" aria-label={`Edytuj aneks ${amendment.amendmentNumber}`}>
                                             Edytuj
                                         </Link>
@@ -60,6 +61,7 @@ export default function ContractAmendmentsCard({ contract }) {
                                             ? formatAmendmentDate(amendment.newEndDate) : 'Bez zmiany terminu'}</dd></div>
                                     </dl>
                                     {amendment.description && <p className="amendments-description">{amendment.description}</p>}
+                                    <AttachmentDisclosure ownerType="amendment" ownerId={amendment.id} title={`Dokumenty aneksu ${amendment.amendmentNumber}`} />
                                 </article>
                             ))}
                         </div>}

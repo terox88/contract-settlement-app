@@ -10,6 +10,11 @@ import java.math.BigDecimal;
 public class MainInvoiceSettlementResponse {
 
     private Long id;
+    private Long parentSubcontractorInvoiceId;
+    private String parentInvoiceNumber;
+    private BigDecimal parentInvoiceGrossAmount;
+    private BigDecimal totalAssignedToParentInvoice;
+    private boolean parentInvoiceAmountExceeded;
 
     private Long mainContractorInvoiceId;
     private String mainContractorInvoiceNumber;

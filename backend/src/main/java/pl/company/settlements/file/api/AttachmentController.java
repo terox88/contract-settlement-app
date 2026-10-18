@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import pl.company.settlements.file.domain.AttachmentType;
+import pl.company.settlements.file.domain.AttachmentOwner;
+import pl.company.settlements.file.model.AttachmentTypeOption;
+import java.util.Arrays;
 import pl.company.settlements.file.model.AttachmentDownload;
 import pl.company.settlements.file.model.AttachmentResponse;
 import pl.company.settlements.file.service.DocumentAttachmentService;
@@ -29,6 +32,13 @@ import java.util.List;
 public class AttachmentController {
 
     private final DocumentAttachmentService service;
+
+    @GetMapping("/api/attachments/types")
+    public List<AttachmentTypeOption> types(@RequestParam AttachmentOwner owner) {
+        return Arrays.stream(AttachmentType.values()).filter(owner::supports)
+                .map(type -> new AttachmentTypeOption(type, type.getLabel())).toList();
+    }
+
 
     @PostMapping(
             value = "/api/contracts/{contractId}/attachments",
@@ -266,6 +276,7 @@ public class AttachmentController {
         ResponseEntity.BodyBuilder response =
                 ResponseEntity.ok()
                         .contentType(mediaType)
+                        .header("X-Content-Type-Options", "nosniff")
                         .header(
                                 HttpHeaders.CONTENT_DISPOSITION,
                                 ContentDisposition

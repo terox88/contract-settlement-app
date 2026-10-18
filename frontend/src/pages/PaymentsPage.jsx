@@ -23,7 +23,7 @@ export default function PaymentsPage() {
         return () => { active = false; controller.abort(); };
     }, [attempt]);
     const needle = query.trim().toLocaleLowerCase('pl-PL');
-    const visible = payments.filter((payment) => `${payment.paymentDate} ${payment.bankReference ?? ''} ${payment.description ?? ''}`.toLocaleLowerCase('pl-PL').includes(needle)
+    const visible = payments.filter((payment) => `${payment.paymentDate} ${payment.description ?? ''}`.toLocaleLowerCase('pl-PL').includes(needle)
         && (!onlyAvailable || moneyCents(payment.unallocatedAmount) > 0n));
     return <>
         <Link className="back-link" to="/tasks">← Zadania inwestycyjne</Link>
@@ -31,13 +31,12 @@ export default function PaymentsPage() {
             <Link className="main-form-button main-form-button-primary" to="/payments/new">Dodaj przelew</Link></div>
             {loading ? <p role="status">Ładowanie przelewów...</p> : error ? <div role="alert" className="error-message">{error}
                 <button className="retry-button" onClick={() => setAttempt((value) => value + 1)}>Spróbuj ponownie</button></div> : <>
-                <div className="invoice-filters"><label>Data, identyfikator lub opis<input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+                <div className="invoice-filters"><label>Data lub uwagi<input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
                     <label className="invoice-filter-check"><input type="checkbox" checked={onlyAvailable} onChange={(event) => setOnlyAvailable(event.target.checked)} /> Z kwotą do przypisania</label></div>
                 <p className="invoice-muted" role="status">Widoczne przelewy: {visible.length} z {payments.length}.</p>
                 {!payments.length ? <p>Brak przelewów. Dodaj pierwszy przelew lub otwórz płatności konkretnej faktury.</p> : !visible.length && <p>Brak przelewów pasujących do filtrów.</p>}
                 <div className="invoice-list">{visible.map((payment) => <article className="invoice-item" key={payment.id}>
                     <div className="invoice-heading"><div><h2>{formatAmendmentDate(payment.paymentDate)} · {formatInvoiceAmount(payment.amount, payment.currency)}</h2>
-                        <p className="payment-reference">{payment.bankReference || 'Brak identyfikatora przelewu'}</p>
                         {payment.description && <p className="invoice-description">{payment.description}</p>}
                         <p>Przypisano: {formatInvoiceAmount(payment.allocatedAmount, payment.currency)} · dostępne: {formatInvoiceAmount(payment.unallocatedAmount, payment.currency)}</p>
                         {moneyCents(payment.unallocatedAmount) < 0n && <p className="invoice-warning">Istniejące przypisania przekraczają kwotę przelewu. Sprawdź rozliczenia.</p>}

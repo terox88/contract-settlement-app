@@ -101,18 +101,28 @@ export async function resolveTaskNavigation(http, url, signal) {
             else if (isId(rest[1])) {
                 const sub = await get(`/subcontracts/${rest[1]}`);
                 if (!sameId(sub?.id, rest[1]) || !sameId(sub.mainContractId, contractId)) throw new Error('Umowa podwykonawcza dotyczy innej umowy głównej.');
+                const chain = [], seen = new Set(); let node = sub;
+                while (node) {
+                    if (!isId(node.id) || seen.has(String(node.id)) || !sameId(node.mainContractId, contractId)) throw new Error('Nieprawidłowy łańcuch umów podwykonawczych.');
+                    seen.add(String(node.id)); chain.unshift(node);
+                    node = node.parentSubcontractId == null ? null : await get(`/subcontracts/${node.parentSubcontractId}`);
+                }
+                for (const ancestor of chain) crumbs.push({ title: `Umowa PW ${ancestor.contractNumber || ancestor.id} · ${ancestor.subcontractorName || ''}`.trim(),
+                    url: `${base}/subcontracts/${ancestor.id}` });
                 const subBase = `${base}/subcontracts/${sub.id}/invoices`;
-                crumbs.push({ title: `Faktury umowy PW ${sub.contractNumber || sub.id}`, url: subBase });
                 if (rest[2] === 'edit') crumbs.push({ title: 'Edycja umowy PW', url: parsed.pathname });
-                if (rest[2] === 'invoices' && rest[3] === 'new') crumbs.push({ title: 'Nowa faktura PW', url: parsed.pathname });
-                else if (rest[2] === 'invoices' && isId(rest[3])) {
-                    const invoice = await get(`/subcontractor-invoices/${rest[3]}`);
-                    if (!sameId(invoice?.id, rest[3]) || !sameId(invoice.subcontractId, sub.id) || !sameId(invoice.mainContractId, contractId)) throw new Error('Faktura podwykonawcy dotyczy innej umowy.');
-                    const paymentPath = `${subBase}/${invoice.id}/payments`;
-                    // Faktura PW ma widok listy oraz rozliczeń; link prowadzi do istniejącego widoku.
-                    crumbs.push({ title: `Faktura PW ${invoice.invoiceNumber}`, url: rest[4] === 'payments' || paymentMode ? paymentPath : subBase });
-                    if (rest[4] === 'edit') crumbs.push({ title: 'Edycja faktury PW', url: parsed.pathname });
-                    if (rest[4] === 'payments') crumbs.push({ title: 'Płatności i potrącenia', url: parsed.pathname });
+                if (rest[2] === 'children') crumbs.push({ title: 'Nowa umowa dalszego podwykonawcy', url: parsed.pathname });
+                if (rest[2] === 'amendments') crumbs.push({ title: rest[3] === 'new' ? 'Nowy aneks PW' : 'Edycja aneksu PW', url: parsed.pathname });
+                if (rest[2] === 'invoices') {
+                    crumbs.push({ title: 'Faktury PW', url: subBase });
+                    if (rest[3] === 'new') crumbs.push({ title: 'Nowa faktura PW', url: parsed.pathname });
+                    else if (isId(rest[3])) {
+                        const invoice = await get(`/subcontractor-invoices/${rest[3]}`);
+                        if (!sameId(invoice?.id, rest[3]) || !sameId(invoice.subcontractId, sub.id) || !sameId(invoice.mainContractId, contractId)) throw new Error('Faktura podwykonawcy dotyczy innej umowy.');
+                        crumbs.push({ title: `Faktura PW ${invoice.invoiceNumber}`, url: `${subBase}/${invoice.id}/settlements` });
+                        if (rest[4] === 'edit') crumbs.push({ title: 'Edycja faktury PW', url: parsed.pathname });
+                        if (rest[4] === 'payments') crumbs.push({ title: 'Płatności i potrącenia', url: parsed.pathname });
+                    }
                 }
             }
         }
@@ -124,7 +134,7 @@ export async function resolveTaskNavigation(http, url, signal) {
             const payment = await get(`/payments/${parts[1]}`);
             if (!sameId(payment?.id, parts[1])) throw new Error('Nie można potwierdzić przelewu.');
             const suffix = parsed.search;
-            crumbs.push({ title: `Przelew ${payment.bankReference || `#${payment.id}`}`, url: `/payments/${payment.id}${suffix}` });
+            crumbs.push({ title: `Przelew ${payment.paymentDate || ""}${payment.amount != null ? ` · ${payment.amount} ${payment.currency || ""}` : ""}`, url: `/payments/${payment.id}${suffix}` });
             if (parts[2] === 'edit') crumbs.push({ title: 'Edycja przelewu', url: safe });
         }
     }

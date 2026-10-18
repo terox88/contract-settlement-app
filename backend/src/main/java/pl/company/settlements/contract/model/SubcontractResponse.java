@@ -14,6 +14,13 @@ public class SubcontractResponse {
 
     private Long id;
 
+    private Long parentSubcontractId;
+    private String parentSubcontractNumber;
+    private Long payerContractorId;
+    private String payerContractorName;
+    private BigDecimal subcontractsTotalValue;
+    private BigDecimal remainingForSubcontracts;
+
     private Long mainContractId;
     private String mainContractNumber;
 

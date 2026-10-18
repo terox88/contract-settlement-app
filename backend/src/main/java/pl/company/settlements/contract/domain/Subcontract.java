@@ -21,6 +21,14 @@ public class Subcontract extends Contract {
     @JoinColumn(name = "main_contract_id", nullable = false)
     private MainContract mainContract;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_subcontract_id")
+    private Subcontract parentSubcontract;
+
+    public Contractor getPayerContractor() {
+        return parentSubcontract == null ? mainContract.getMainContractor() : parentSubcontract.getSubcontractor();
+    }
+
     @Embedded
     @AttributeOverrides({
             @AttributeOverride(

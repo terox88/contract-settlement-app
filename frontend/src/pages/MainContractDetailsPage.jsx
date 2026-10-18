@@ -11,6 +11,7 @@ import {
 import http from '../api/http';
 
 import FinancialLimitsCard from '../FinancialLimitsCard';
+import AttachmentDisclosure from '../AttachmentDisclosure';
 import ContractAmendmentsCard from '../ContractAmendmentsCard';
 import SubcontractsCard from '../SubcontractsCard';
 import { formatContractType } from '../utils/contractTypes';
@@ -340,6 +341,8 @@ export default function MainContractDetailsPage() {
                 </div>
 
             </section>
+
+            <AttachmentDisclosure ownerType="contract" ownerId={contract.id} title="Dokumenty umowy — dodaj lub otwórz" />
 
             <ContractAmendmentsCard key={contract.id} contract={contract} />
 

@@ -96,7 +96,10 @@ export function readTarget(invoice, context) {
         readInvoice(invoice, context.subcontractId);
         if (!sameId(invoice.id, context.id) || !sameId(invoice.mainContractId, context.contractId)) throw new Error('Faktura nie należy do tej umowy.');
     }
-    return { ...context, number: invoice.invoiceNumber, name: context.type === 'main' ? invoice.mainContractorName : invoice.subcontractorName,
+    return { ...context,
+        recipientContractorId: context.type === 'main' ? invoice.mainContractorId : invoice.subcontractorId,
+        payerContractorId: context.type === 'main' ? null : invoice.payerContractorId,
+        number: invoice.invoiceNumber, name: context.type === 'main' ? invoice.mainContractorName : invoice.subcontractorName,
         currency: invoice.currency, grossAmount: invoice.grossAmount, invoice };
 }
 export async function loadTarget(http, context, signal) {
@@ -128,8 +131,10 @@ export function validatePaymentAllocations(form, rows) {
     const errors = {};
     if (rows.length > 100) return { allocations: 'Jednorazowo można zapisać najwyżej 100 pozycji.' };
     const ids = new Set(); let total = 0n;
+    const parties = rows[0]?.target;
     for (const row of rows) {
         if (!row.target) { errors.allocations = 'Wybierz fakturę dla każdej pozycji.'; continue; }
+        if (!samePaymentParties(parties, row.target)) errors.allocations = 'Jeden przelew może rozliczać tylko faktury tego samego odbiorcy i zleceniodawcy.';
         const key = targetKey(row.target);
         if (ids.has(key)) errors.allocations = 'Ta sama faktura występuje więcej niż raz.';
         ids.add(key);
@@ -161,4 +166,35 @@ export function allocationInvoicePath(row) {
     if (!row.mainContractId) return null;
     return invoicePaymentsPath({ type: row.mainContractorInvoiceId != null ? 'main' : 'sub', contractId: row.mainContractId,
         subcontractId: row.subcontractId, id: row.mainContractorInvoiceId ?? row.subcontractorInvoiceId });
+}
+
+export function samePaymentParties(left, right) {
+    return Boolean(left && right && validId(left.recipientContractorId) && validId(right.recipientContractorId)
+        && left.type === right.type && sameId(left.recipientContractorId, right.recipientContractorId)
+        && (left.type === 'main' || (validId(left.payerContractorId) && sameId(left.payerContractorId, right.payerContractorId))));
+}
+export function paymentScope(payment) {
+    if (!payment || !validId(payment.recipientContractorId)) return null;
+    return { type: payment.mainInvoicePayment ? 'main' : 'sub', recipientContractorId: payment.recipientContractorId,
+        payerContractorId: payment.payerContractorId };
+}
+export function paymentMatchesTarget(payment, target) {
+    return payment.allocationCount === 0 || (!payment.mixedRecipients && samePaymentParties(paymentScope(payment), target));
+}
+
+export async function loadSameRecipientTargets(http, scope, signal) {
+    if (scope.type === 'sub') {
+        const { data } = await http.get('/subcontractor-invoices', { signal, params: { subcontractorId: scope.recipientContractorId } });
+        if (!Array.isArray(data)) throw new Error('Nie można odczytać faktur odbiorcy.');
+        return data.map((invoice) => readTarget(invoice, { type: 'sub', id: invoice.id,
+            contractId: invoice.mainContractId, subcontractId: invoice.subcontractId })).filter((target) => samePaymentParties(scope, target));
+    }
+    const { data } = await http.get('/main-contracts', { signal });
+    if (!Array.isArray(data)) throw new Error('Nie można odczytać umów odbiorcy.');
+    const results = await Promise.all(data.filter((contract) => sameId(contract.mainContractorId, scope.recipientContractorId)).map(async (contract) => {
+        const response = await http.get(`/main-contractor-invoices/main-contract/${contract.id}`, { signal });
+        if (!Array.isArray(response.data)) throw new Error('Nie można odczytać faktur odbiorcy.');
+        return response.data.map((invoice) => readTarget(invoice, { type: 'main', contractId: contract.id, id: invoice.id }));
+    }));
+    return results.flat().filter((target) => samePaymentParties(scope, target));
 }

@@ -18,7 +18,7 @@ export default function PaymentAllocationCard({ row, payment: suppliedPayment, t
     return <article className="invoice-item">
         <div className="invoice-heading"><div><h2>{main ? 'Faktura GW' : 'Faktura podwykonawcy'} {target.number}</h2>
             <p>{main ? row.mainContractorName : row.subcontractorName}</p>
-            <p>Przelew z {formatAmendmentDate(row.paymentDate)} · <span className="payment-reference">{row.bankReference || 'Brak identyfikatora'}</span></p>
+            <p>Przelew z {formatAmendmentDate(row.paymentDate)}</p>
         </div><div className="settlement-actions"><button className="main-form-button" disabled={disabled} onClick={() => { setEditing(true); setRemoving(false); }}>Zmień rozliczenie</button>
             <button className="main-form-button" disabled={disabled} onClick={() => { setRemoving(true); setEditing(false); }}>Usuń przypisanie przelewu</button></div></div>
         {row.paymentDescription && <p className="invoice-description">{row.paymentDescription}</p>}

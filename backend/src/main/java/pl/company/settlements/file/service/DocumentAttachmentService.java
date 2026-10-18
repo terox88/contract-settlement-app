@@ -9,6 +9,7 @@ import pl.company.settlements.contract.domain.ContractAmendment;
 import pl.company.settlements.contract.repository.ContractAmendmentRepository;
 import pl.company.settlements.contract.repository.ContractRepository;
 import pl.company.settlements.file.domain.AttachmentType;
+import pl.company.settlements.file.domain.AttachmentOwner;
 import pl.company.settlements.file.domain.DocumentAttachment;
 import pl.company.settlements.file.domain.StoredFile;
 import pl.company.settlements.file.model.AttachmentDownload;
@@ -234,6 +235,7 @@ public class DocumentAttachmentService {
             String description,
             String pages
     ) {
+        AttachmentOwner.CONTRACT.validate(type);
 
         Contract contract =
                 contractRepository
@@ -271,6 +273,7 @@ public class DocumentAttachmentService {
             String description,
             String pages
     ) {
+        AttachmentOwner.AMENDMENT.validate(type);
 
         ContractAmendment amendment =
                 contractAmendmentRepository
@@ -308,6 +311,7 @@ public class DocumentAttachmentService {
             String description,
             String pages
     ) {
+        AttachmentOwner.MAIN_INVOICE.validate(type);
 
         MainContractorInvoice invoice =
                 mainContractorInvoiceRepository
@@ -345,6 +349,7 @@ public class DocumentAttachmentService {
             String description,
             String pages
     ) {
+        AttachmentOwner.SUB_INVOICE.validate(type);
 
         SubcontractorInvoice invoice =
                 subcontractorInvoiceRepository
@@ -382,6 +387,7 @@ public class DocumentAttachmentService {
             String description,
             String pages
     ) {
+        AttachmentOwner.PAYMENT.validate(type);
 
         Payment payment =
                 paymentRepository
@@ -419,6 +425,7 @@ public class DocumentAttachmentService {
             String description,
             String pages
     ) {
+        AttachmentOwner.STATEMENT.validate(type);
 
         SubcontractorStatement statement =
                 subcontractorStatementRepository
@@ -504,6 +511,7 @@ public class DocumentAttachmentService {
             String description,
             String parts
     ) {
+        AttachmentOwner.CONTRACT.validate(type);
 
         Contract contract =
                 contractRepository
@@ -537,6 +545,7 @@ public class DocumentAttachmentService {
             String description,
             String parts
     ) {
+        AttachmentOwner.AMENDMENT.validate(type);
 
         ContractAmendment amendment =
                 contractAmendmentRepository
@@ -570,6 +579,7 @@ public class DocumentAttachmentService {
             String description,
             String parts
     ) {
+        AttachmentOwner.MAIN_INVOICE.validate(type);
 
         MainContractorInvoice invoice =
                 mainContractorInvoiceRepository
@@ -603,6 +613,7 @@ public class DocumentAttachmentService {
             String description,
             String parts
     ) {
+        AttachmentOwner.SUB_INVOICE.validate(type);
 
         SubcontractorInvoice invoice =
                 subcontractorInvoiceRepository
@@ -635,6 +646,7 @@ public class DocumentAttachmentService {
             String description,
             String parts
     ) {
+        AttachmentOwner.PAYMENT.validate(type);
 
         Payment payment =
                 paymentRepository
@@ -668,6 +680,7 @@ public class DocumentAttachmentService {
             String description,
             String parts
     ) {
+        AttachmentOwner.STATEMENT.validate(type);
 
         SubcontractorStatement statement =
                 subcontractorStatementRepository
@@ -875,29 +888,8 @@ public class DocumentAttachmentService {
             DocumentAttachment attachment
     ) {
 
-        DocumentAttachment savedAttachment;
-
-        try {
-
-            savedAttachment =
-                    repository.saveAndFlush(
-                            attachment
-                    );
-
-        } catch (RuntimeException exception) {
-
-            fileStorageService.delete(
-                    attachment
-                            .getStoredFile()
-                            .getStorageKey()
-            );
-
-            throw exception;
-        }
-
-        return toResponse(
-                savedAttachment
-        );
+        // Plik jest usuwany przez synchronizację transakcji, jeśli zapis metadanych zostanie wycofany.
+        return toResponse(repository.saveAndFlush(attachment));
     }
 
     private DocumentAttachment findEntityById(
@@ -954,6 +946,7 @@ public class DocumentAttachmentService {
                 attachment.getStoredFile();
 
         return AttachmentResponse.builder()
+                .typeLabel(attachment.getType().getLabel())
                 .id(
                         attachment.getId()
                 )

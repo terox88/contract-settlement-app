@@ -96,4 +96,11 @@ public interface MainInvoiceSettlementRepository
             @Param("invoiceIds")
             Collection<Long> invoiceIds
     );
+    boolean existsByParentSubcontractorInvoice_Id(Long id);
+    boolean existsByParentSubcontractorInvoice_IdAndSubcontractorInvoice_Id(Long parentId, Long childId);
+    List<MainInvoiceSettlement> findAllByParentSubcontractorInvoice_IdOrderByIdAsc(Long id);
+
+    @Query("select coalesce(sum(s.settledAmount), 0) from MainInvoiceSettlement s where s.parentSubcontractorInvoice.id = :id")
+    BigDecimal sumByParentSubcontractorInvoiceId(@Param("id") Long id);
+
 }

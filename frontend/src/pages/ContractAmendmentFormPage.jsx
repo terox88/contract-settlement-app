@@ -11,15 +11,15 @@ import './MainContractFormPage.css';
 import './ContractAmendmentFormPage.css';
 
 export default function ContractAmendmentFormPage() {
-    const { contractId, amendmentId } = useParams();
-    return <ContractAmendmentForm key={`${contractId}-${amendmentId ?? 'new'}`}
-        contractId={contractId} amendmentId={amendmentId} />;
+    const { contractId, amendmentId, subcontractId } = useParams();
+    return <ContractAmendmentForm key={`${contractId}-${subcontractId ?? "main"}-${amendmentId ?? 'new'}`}
+        contractId={subcontractId ?? contractId} amendmentId={amendmentId} rootId={contractId} subcontractId={subcontractId} />;
 }
 
-function ContractAmendmentForm({ contractId, amendmentId }) {
+function ContractAmendmentForm({ contractId, amendmentId, rootId, subcontractId }) {
     const navigate = useNavigate();
     const isEditing = Boolean(amendmentId);
-    const returnPath = `/main-contracts/${contractId}`;
+    const returnPath = subcontractId ? `/main-contracts/${rootId}/subcontracts/${subcontractId}` : `/main-contracts/${contractId}`;
     const [contract, setContract] = useState(null);
     const [amendments, setAmendments] = useState([]);
     const [form, setForm] = useState(emptyAmendment);
@@ -44,13 +44,13 @@ function ContractAmendmentForm({ contractId, amendmentId }) {
         setLoading(true);
         setLoadError('');
         Promise.all([
-            http.get(`/main-contracts/${contractId}`, { signal: controller.signal }),
+            http.get(subcontractId ? `/subcontracts/${contractId}` : `/main-contracts/${contractId}`, { signal: controller.signal }),
             http.get(`/contract-amendments/contract/${contractId}`, { signal: controller.signal }),
         ])
             .then(([contractResponse, amendmentsResponse]) => {
                 if (!active) return;
                 const data = contractResponse.data;
-                if (!data?.id || String(data.id) !== String(contractId) || !validDate(data.contractDate)) {
+                if (!data?.id || String(data.id) !== String(contractId) || !validDate(data.contractDate) || (subcontractId && String(data.mainContractId) !== String(rootId))) {
                     throw new Error('Nie można odczytać danych tej umowy. Spróbuj ponownie.');
                 }
                 const rows = readAmendmentList(amendmentsResponse.data, contractId);
@@ -63,7 +63,7 @@ function ContractAmendmentForm({ contractId, amendmentId }) {
             .catch((error) => { if (active) setLoadError(error.message); })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; controller.abort(); };
-    }, [contractId, amendmentId, isEditing, loadAttempt]);
+    }, [contractId, rootId, subcontractId, amendmentId, isEditing, loadAttempt]);
 
     function changeField(name, value) {
         setForm((current) => ({ ...current, [name]: value }));
@@ -109,7 +109,7 @@ function ContractAmendmentForm({ contractId, amendmentId }) {
             <section className="card main-form-card">
                 <div className="main-form-heading">
                     <h1>{isEditing ? 'Edytuj aneks' : 'Dodaj aneks'}</h1>
-                    {contract && <p>Umowa {contract.contractNumber} · {contract.mainContractorName}</p>}
+                    {contract && <p>Umowa {contract.contractNumber} · {contract.subcontractorName ?? contract.mainContractorName}</p>}
                     <p>Pola oznaczone * są wymagane.</p>
                 </div>
 

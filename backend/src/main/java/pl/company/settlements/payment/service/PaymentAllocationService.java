@@ -3,6 +3,9 @@ package pl.company.settlements.payment.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import pl.company.settlements.contract.service.ContractHierarchyValidationService;
+import pl.company.settlements.contract.service.ContractSettlementValidationService;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
 import pl.company.settlements.invoice.repository.SubcontractorInvoiceRepository;
 import pl.company.settlements.payment.domain.Payment;
@@ -15,6 +18,8 @@ import pl.company.settlements.payment.repository.PaymentRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Collection;
+import java.util.TreeSet;
 
 import pl.company.settlements.invoice.domain.Invoice;
 import pl.company.settlements.invoice.domain.MainContractorInvoice;
@@ -25,6 +30,12 @@ import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository
 @Transactional(readOnly = true)
 public class PaymentAllocationService {
 
+    private void validateParties(Long paymentId, Invoice invoice) {
+        for (PaymentAllocation existing : repository.findAllByPayment_IdOrderByIdAsc(paymentId)) {
+            PaymentParties.requireSame(PaymentParties.of(existing), PaymentParties.of(invoice));
+        }
+    }
+
     private final PaymentAllocationRepository repository;
 
     private final PaymentRepository paymentRepository;
@@ -34,6 +45,18 @@ public class PaymentAllocationService {
 
     private final MainContractorInvoiceRepository
             mainContractorInvoiceRepository;
+    private final ContractHierarchyValidationService hierarchyValidationService;
+    private final ContractSettlementValidationService settlementValidationService;
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockInvoiceContracts(Collection<Long> mainInvoiceIds, Collection<Long> subInvoiceIds) {
+        var roots = new TreeSet<Long>();
+        for (Long id : mainInvoiceIds) roots.add(mainContractorInvoiceRepository.findMainContractIdById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono faktury GW.")));
+        for (Long id : subInvoiceIds) roots.add(subcontractorInvoiceRepository.findMainContractIdById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono faktury podwykonawcy.")));
+        roots.forEach(hierarchyValidationService::lockMainContract);
+    }
 
     public PaymentAllocationResponse getById(
             Long id
@@ -155,6 +178,9 @@ public class PaymentAllocationService {
                 null
         );
 
+        lockInvoiceContracts(request.getMainContractorInvoiceId() == null ? List.of() : List.of(request.getMainContractorInvoiceId()),
+                request.getSubcontractorInvoiceId() == null ? List.of() : List.of(request.getSubcontractorInvoiceId()));
+
         PaymentAllocation allocation;
 
         if (request.getSubcontractorInvoiceId() != null) {
@@ -173,6 +199,7 @@ public class PaymentAllocationService {
                                     )
                             );
 
+            validateParties(payment.getId(), invoice);
             validateCurrencies(
                     payment,
                     invoice
@@ -205,6 +232,7 @@ public class PaymentAllocationService {
                                     )
                             );
 
+            validateParties(payment.getId(), invoice);
             validateCurrencies(
                     payment,
                     invoice
@@ -230,6 +258,9 @@ public class PaymentAllocationService {
                             invoice
                     );
         }
+
+        settlementValidationService.validateAllocation(invoiceOf(allocation), BigDecimal.ZERO, BigDecimal.ZERO,
+                request.getAllocatedAmount(), request.getDeductedAmount());
 
         allocation.setAllocatedAmount(
                 request.getAllocatedAmount()
@@ -281,6 +312,10 @@ public class PaymentAllocationService {
                 id
         );
 
+        settlementValidationService.validateAllocation(invoiceOf(allocation),
+                allocation.getAllocatedAmount(), allocation.getDeductedAmount(),
+                request.getAllocatedAmount(), request.getDeductedAmount());
+
         allocation.setAllocatedAmount(
                 request.getAllocatedAmount()
         );
@@ -312,11 +347,17 @@ public class PaymentAllocationService {
     private void lockAllocationTargets(PaymentAllocation allocation) {
         paymentRepository.findByIdForUpdate(allocation.getPayment().getId()).orElseThrow(() ->
                 new IllegalArgumentException("Nie znaleziono przelewu."));
+        lockInvoiceContracts(allocation.isMainContractorInvoiceAllocation() ? List.of(allocation.getMainContractorInvoice().getId()) : List.of(),
+                allocation.isSubcontractorInvoiceAllocation() ? List.of(allocation.getSubcontractorInvoice().getId()) : List.of());
         if (allocation.isMainContractorInvoiceAllocation()) {
             mainContractorInvoiceRepository.findByIdForUpdate(allocation.getMainContractorInvoice().getId()).orElseThrow();
         } else {
             subcontractorInvoiceRepository.findByIdForUpdate(allocation.getSubcontractorInvoice().getId()).orElseThrow();
         }
+    }
+
+    private Invoice invoiceOf(PaymentAllocation allocation) {
+        return allocation.isMainContractorInvoiceAllocation() ? allocation.getMainContractorInvoice() : allocation.getSubcontractorInvoice();
     }
 
     private PaymentAllocation findEntityById(
@@ -511,6 +552,8 @@ public class PaymentAllocationService {
                     ) < 0;
 
             return PaymentAllocationResponse.builder()
+                    .recipientContractorId(PaymentParties.of(invoice).recipientId())
+                    .payerContractorId(PaymentParties.of(invoice).payerId())
                     .id(
                             allocation.getId()
                     )
@@ -661,6 +704,8 @@ public class PaymentAllocationService {
                     ) < 0;
 
             return PaymentAllocationResponse.builder()
+                    .recipientContractorId(PaymentParties.of(invoice).recipientId())
+                    .payerContractorId(PaymentParties.of(invoice).payerId())
                     .id(
                             allocation.getId()
                     )

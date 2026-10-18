@@ -20,7 +20,7 @@ public final class ContractHierarchyRuleCases {
         tests.add(new Scenario("Umowa zerowa podpisana w ostatnim dniu jest dozwolona", () ->
                 valid(main("1000", "2026-10-01", "2026-12-31"), sub("0", "2026-12-31", "2026-12-31", 2L, "2222222222"))));
         tests.add(new Scenario("Przekroczenie wartości o grosz jest odrzucane", () ->
-                invalid(mainDefault(), sub("1000.01", "2026-11-01", "2026-12-31", 2L, "2222222222"), "wartości umowy głównej")));
+                invalid(mainDefault(), sub("1000.01", "2026-11-01", "2026-12-31", 2L, "2222222222"), "wartości umowy zleceniodawcy")));
         tests.add(new Scenario("Podpisanie przed umową główną jest odrzucane", () ->
                 invalid(mainDefault(), sub("100", "2026-09-30", "2026-12-31", 2L, "2222222222"), "Data zawarcia")));
         tests.add(new Scenario("Podpisanie po końcu głównej jest dozwolone z ostrzeżeniem", () -> {
@@ -61,7 +61,7 @@ public final class ContractHierarchyRuleCases {
         tests.add(new Scenario("Aneks podwykonawcy nie może przekroczyć wartości głównej", () -> {
             var sub = ContractHierarchyRules.state(money("200"), date("2026-11-01"), date("2026-12-31"),
                     List.of(new ContractHierarchyRules.Change(1L, date("2026-11-15"), money("900"), null)), 2L, "2222222222");
-            invalid(mainDefault(), sub, "wartości umowy głównej");
+            invalid(mainDefault(), sub, "wartości umowy zleceniodawcy");
         }));
         tests.add(new Scenario("Skrócenie głównej jest dozwolone i powoduje ostrzeżenie", () -> {
             var main = ContractHierarchyRules.state(money("1000"), date("2026-10-01"), date("2026-12-31"),

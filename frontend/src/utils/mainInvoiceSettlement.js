@@ -31,14 +31,20 @@ export function buildMainInvoiceRequest(contractId, invoiceId, form) {
     return { method: 'post', url: '/main-contractor-invoices', data };
 }
 
-export function readSettlementWorkspace(main, assignments, invoices, subcontracts, contractId, mainInvoiceId) {
-    readMainInvoice(main, contractId, mainInvoiceId);
+export function readSettlementWorkspace(main, assignments, invoices, subcontracts, contractId, mainInvoiceId, parentSubcontractId = null) {
+    if (parentSubcontractId) {
+        readInvoice(main, parentSubcontractId);
+        if (!sameId(main.id, mainInvoiceId) || !sameId(main.mainContractId, contractId)) throw new Error('Nieprawidłowa faktura zleceniodawcy.');
+    } else readMainInvoice(main, contractId, mainInvoiceId);
     if (![assignments, invoices, subcontracts].every(Array.isArray)) {
         throw new Error('Nie można odczytać danych rozliczenia.');
     }
     for (const sub of subcontracts) {
         if (!sub?.id || !sameId(sub.mainContractId, contractId)) throw new Error('Nieprawidłowa lista umów podwykonawczych.');
     }
+    const eligibleSubcontracts = subcontracts.filter((sub) => parentSubcontractId
+        ? sameId(sub.parentSubcontractId, parentSubcontractId) : sub.parentSubcontractId == null);
+    const eligibleIds = new Set(eligibleSubcontracts.map((sub) => String(sub.id)));
     const byId = new Map();
     for (const invoice of invoices) {
         readInvoice(invoice, invoice.subcontractId);
@@ -51,25 +57,26 @@ export function readSettlementWorkspace(main, assignments, invoices, subcontract
     const used = new Set();
     const rows = assignments.map((assignment) => {
         const invoice = byId.get(String(assignment.subcontractorInvoiceId));
-        if (!assignment.id || !sameId(assignment.mainContractorInvoiceId, mainInvoiceId)
-            || !invoice || used.has(String(invoice.id)) || !parseBudgetAmount(assignment.settledAmount)
+        if (!assignment.id || !sameId(parentSubcontractId ? assignment.parentSubcontractorInvoiceId : assignment.mainContractorInvoiceId, mainInvoiceId)
+            || !invoice || !eligibleIds.has(String(invoice.subcontractId)) || used.has(String(invoice.id)) || !parseBudgetAmount(assignment.settledAmount)
             || cents(assignment.settledAmount) <= 0n) {
             throw new Error('Dane przypisań są niekompletne. Odśwież rozliczenie.');
         }
         used.add(String(invoice.id));
         return { ...assignment, invoice };
     });
-    return { main, rows, invoices, subcontracts };
+    return { main, rows, invoices: invoices.filter((invoice) => eligibleIds.has(String(invoice.subcontractId))),
+        subcontracts: eligibleSubcontracts, parentType: parentSubcontractId ? 'sub' : 'main' };
 }
 
-export async function loadSettlementWorkspace(http, contractId, mainInvoiceId, signal) {
+export async function loadSettlementWorkspace(http, contractId, mainInvoiceId, signal, parentSubcontractId = null) {
     const [main, assignments, invoices, subcontracts] = await Promise.all([
-        http.get(`/main-contractor-invoices/${mainInvoiceId}`, { signal }),
-        http.get(`/main-invoice-settlements/main-invoice/${mainInvoiceId}`, { signal }),
+        http.get(parentSubcontractId ? `/subcontractor-invoices/${mainInvoiceId}` : `/main-contractor-invoices/${mainInvoiceId}`, { signal }),
+        http.get(`/main-invoice-settlements/${parentSubcontractId ? "parent-invoice" : "main-invoice"}/${mainInvoiceId}`, { signal }),
         http.get('/subcontractor-invoices', { signal, params: { mainContractId: contractId } }),
         http.get('/subcontracts', { signal, params: { mainContractId: contractId } }),
     ]);
-    return readSettlementWorkspace(main.data, assignments.data, invoices.data, subcontracts.data, contractId, mainInvoiceId);
+    return readSettlementWorkspace(main.data, assignments.data, invoices.data, subcontracts.data, contractId, mainInvoiceId, parentSubcontractId);
 }
 
 export function availableInvoices(workspace, query = '') {
@@ -104,21 +111,21 @@ export function centsToAmount(value) {
     return `${sign}${absolute / 100n}.${String(absolute % 100n).padStart(2, '0')}`;
 }
 
-export function buildAssignmentRequest(mainInvoiceId, invoiceId, amount, maximum, assignmentId = null) {
+export function buildAssignmentRequest(mainInvoiceId, invoiceId, amount, maximum, assignmentId = null, parentType = 'main') {
     const error = assignmentError(amount, maximum);
     if (error) throw new Error(error);
     const data = { settledAmount: parseBudgetAmount(amount).amount };
     if (assignmentId) return { method: 'put', url: `/main-invoice-settlements/${assignmentId}`, data };
     return { method: 'post', url: '/main-invoice-settlements', data: { ...data,
-        mainContractorInvoiceId: apiId(mainInvoiceId), subcontractorInvoiceId: apiId(invoiceId) } };
+        [parentType === 'sub' ? 'parentSubcontractorInvoiceId' : 'mainContractorInvoiceId']: apiId(mainInvoiceId), subcontractorInvoiceId: apiId(invoiceId) } };
 }
 
-export function buildInvoiceAndAssignmentRequest(mainInvoiceId, subcontractId, form, amount) {
+export function buildInvoiceAndAssignmentRequest(mainInvoiceId, subcontractId, form, amount, parentType = 'main') {
     const invoice = buildInvoiceRequest(subcontractId, null, form).data;
     const error = assignmentError(amount, invoice.grossAmount);
     if (error) throw new Error(error);
     return { method: 'post', url: '/main-invoice-settlements/with-new-invoice', data: {
-        mainContractorInvoiceId: apiId(mainInvoiceId), invoice, settledAmount: parseBudgetAmount(amount).amount,
+        [parentType === 'sub' ? 'parentSubcontractorInvoiceId' : 'mainContractorInvoiceId']: apiId(mainInvoiceId), invoice, settledAmount: parseBudgetAmount(amount).amount,
     } };
 }
 

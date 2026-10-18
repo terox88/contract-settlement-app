@@ -170,16 +170,23 @@ public class SubcontractService {
                 request.getInitialEndDate()
         );
 
+        Subcontract parent = request.getParentSubcontractId() == null ? null : findEntityById(request.getParentSubcontractId());
+        if (parent != null && !parent.getMainContract().getId().equals(mainContract.getId())) {
+            throw new IllegalArgumentException("Umowa zleceniodawcy należy do innej umowy głównej.");
+        }
         hierarchyValidationService.validateSubcontractCreate(mainContract, request);
 
         Contractor subcontractor = resolveSubcontractor(request);
-        hierarchyValidationService.validateResolvedSubcontractor(mainContract, subcontractor);
+        if (parent == null) hierarchyValidationService.validateResolvedSubcontractor(mainContract, subcontractor);
+        else hierarchyValidationService.validateResolvedSubcontractor(mainContract, parent, subcontractor);
 
         Subcontract subcontract =
                 new Subcontract(
                         mainContract,
                         subcontractor
                 );
+
+        subcontract.setParentSubcontract(parent);
 
         applyContractData(
                 subcontract,
@@ -431,7 +438,16 @@ public class SubcontractService {
                 performanceSecurityDeductionAmount
                         .add(otherDeductionAmount);
 
+        BigDecimal childrenTotal = repository.findAllByMainContract_Id(subcontract.getMainContract().getId()).stream()
+                .filter(child -> child.getParentSubcontract() != null && subcontract.getId().equals(child.getParentSubcontract().getId()))
+                .map(Subcontract::getCurrentValue).reduce(BigDecimal.ZERO, BigDecimal::add);
         return SubcontractResponse.builder()
+                .parentSubcontractId(subcontract.getParentSubcontract() == null ? null : subcontract.getParentSubcontract().getId())
+                .parentSubcontractNumber(subcontract.getParentSubcontract() == null ? null : subcontract.getParentSubcontract().getContractNumber())
+                .payerContractorId(subcontract.getPayerContractor() == null ? null : subcontract.getPayerContractor().getId())
+                .payerContractorName(subcontract.getPayerContractor() == null ? null : subcontract.getPayerContractor().getName())
+                .subcontractsTotalValue(childrenTotal)
+                .remainingForSubcontracts(currentValue.subtract(childrenTotal))
                 .id(subcontract.getId())
 
                 .mainContractId(

@@ -199,6 +199,9 @@ public class PaymentService {
             );
         }
 
+        if (!payment.getAttachments().isEmpty()) {
+            throw new IllegalArgumentException("Przed usunięciem przelewu usuń jego załączniki.");
+        }
         paymentRepository.delete(payment);
     }
 
@@ -354,7 +357,14 @@ public class PaymentService {
                                 allocatedAmount
                         );
 
+        var allocations = paymentAllocationRepository.findAllByPayment_IdOrderByIdAsc(payment.getId());
+        var parties = allocations.isEmpty() ? null : PaymentParties.of(allocations.get(0));
+        boolean mixed = parties != null && allocations.stream().anyMatch(row -> !parties.equals(PaymentParties.of(row)));
         return PaymentResponse.builder()
+                .recipientContractorId(parties == null ? null : parties.recipientId())
+                .payerContractorId(parties == null ? null : parties.payerId())
+                .mainInvoicePayment(parties == null ? null : parties.main())
+                .mixedRecipients(mixed)
                 .id(
                         payment.getId()
                 )

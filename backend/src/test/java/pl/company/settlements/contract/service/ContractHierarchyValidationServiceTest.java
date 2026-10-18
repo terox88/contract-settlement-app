@@ -34,13 +34,14 @@ class ContractHierarchyValidationServiceTest {
 
     @Mock private MainContractRepository mainContractRepository;
     @Mock private SubcontractRepository subcontractRepository;
+    @Mock private ContractSettlementValidationService settlementValidationService;
     private ContractHierarchyValidationService service;
     private MainContract main;
     private Subcontract sub;
 
     @BeforeEach
     void setUp() {
-        service = new ContractHierarchyValidationService(mainContractRepository, subcontractRepository);
+        service = new ContractHierarchyValidationService(mainContractRepository, subcontractRepository, settlementValidationService);
         Contractor general = new Contractor("Generalny wykonawca", "1111111111");
         general.setId(1L);
         Contractor subcontractor = new Contractor("Podwykonawca", "2222222222");

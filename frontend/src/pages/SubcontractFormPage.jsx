@@ -15,15 +15,16 @@ import './MainContractFormPage.css';
 import './SubcontractFormPage.css';
 
 export default function SubcontractFormPage() {
-    const { contractId, subcontractId } = useParams();
-    return <SubcontractForm key={`${contractId}-${subcontractId ?? 'new'}`}
-        contractId={contractId} subcontractId={subcontractId} />;
+    const { contractId, subcontractId, parentSubcontractId } = useParams();
+    return <SubcontractForm key={`${contractId}-${subcontractId ?? 'new'}-${parentSubcontractId ?? 'root'}`}
+        contractId={contractId} subcontractId={subcontractId} parentSubcontractId={parentSubcontractId} />;
 }
 
-function SubcontractForm({ contractId, subcontractId }) {
+function SubcontractForm({ contractId, subcontractId, parentSubcontractId }) {
     const navigate = useNavigate();
     const isEditing = Boolean(subcontractId);
-    const returnPath = `/main-contracts/${contractId}`;
+    const returnPath = subcontractId ? `/main-contracts/${contractId}/subcontracts/${subcontractId}`
+        : parentSubcontractId ? `/main-contracts/${contractId}/subcontracts/${parentSubcontractId}` : `/main-contracts/${contractId}`;
     const [mainContract, setMainContract] = useState(null);
     const [savedSubcontract, setSavedSubcontract] = useState(null);
     const [contractTypes, setContractTypes] = useState([]);
@@ -62,7 +63,7 @@ function SubcontractForm({ contractId, subcontractId }) {
         ];
         if (isEditing) requests.push(http.get(`/subcontracts/${subcontractId}`, { signal: controller.signal }));
         Promise.all(requests)
-            .then(([mainResponse, typesResponse, subResponse]) => {
+            .then(async ([mainResponse, typesResponse, subResponse]) => {
                 if (!active) return;
                 const main = mainResponse.data;
                 if (!main?.id || String(main.id) !== String(contractId)) {
@@ -74,7 +75,12 @@ function SubcontractForm({ contractId, subcontractId }) {
                     || String(sub.mainContractId) !== String(contractId))) {
                     throw new Error('Umowa podwykonawcza nie jest przypisana do tej umowy głównej.');
                 }
-                setMainContract(main);
+                const parentId = isEditing ? sub.parentSubcontractId : parentSubcontractId;
+                const parent = parentId ? (await http.get(`/subcontracts/${parentId}`, { signal: controller.signal })).data : null;
+                if (parent && (String(parent.id) !== String(parentId) || String(parent.mainContractId) !== String(contractId))) throw new Error('Nieprawidłowa umowa zleceniodawcy.');
+                if (!active) return;
+                setMainContract(parent ? { ...parent, mainContractorId: parent.subcontractorId, mainContractorTaxId: parent.subcontractorTaxId,
+                    mainContractorName: parent.subcontractorName } : main);
                 setContractTypes(types);
                 if (isEditing) {
                     setSavedSubcontract(sub);
@@ -85,7 +91,7 @@ function SubcontractForm({ contractId, subcontractId }) {
             .catch((error) => { if (active) setLoadError(error.message); })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; controller.abort(); };
-    }, [contractId, subcontractId, isEditing, loadAttempt]);
+    }, [contractId, subcontractId, parentSubcontractId, isEditing, loadAttempt]);
 
     useEffect(() => {
         if (isEditing) return;
@@ -170,6 +176,7 @@ function SubcontractForm({ contractId, subcontractId }) {
         setSaving(true);
         try {
             const request = buildSubcontractRequest(contractId, subcontractId, contract, deductions, contractor, nip, selected);
+            if (!isEditing && parentSubcontractId) request.data.parentSubcontractId = Number(parentSubcontractId);
             await http[request.method](request.url, request.data);
             if (mountedRef.current) navigate(returnPath, { replace: true });
         } catch (error) {
@@ -194,12 +201,12 @@ function SubcontractForm({ contractId, subcontractId }) {
 
     return (
         <>
-            {saving ? <span className="back-link" aria-disabled="true">← Szczegóły umowy głównej</span>
-                : <Link to={returnPath} className="back-link">← Szczegóły umowy głównej</Link>}
+            {saving ? <span className="back-link" aria-disabled="true">← Szczegóły umowy zleceniodawcy</span>
+                : <Link to={returnPath} className="back-link">← Szczegóły umowy zleceniodawcy</Link>}
             <section className="card main-form-card">
                 <div className="main-form-heading">
                     <h1>{isEditing ? 'Edytuj umowę podwykonawczą' : 'Dodaj umowę podwykonawczą'}</h1>
-                    {mainContract && <p>Umowa główna {mainContract.contractNumber} · {mainContract.mainContractorName}</p>}
+                    {mainContract && <p>Umowa zleceniodawcy {mainContract.contractNumber} · {mainContract.mainContractorName}</p>}
                     {isEditing && <p>Edytujesz dane pierwotne umowy podwykonawczej i zasady potrąceń.</p>}
                     <p>Pola oznaczone * są wymagane.</p>
                 </div>
@@ -218,7 +225,7 @@ function SubcontractForm({ contractId, subcontractId }) {
                                     <div><dt>Pozostanie do rozdysponowania</dt><dd>{formatBudgetCents(summary.remainingCents)}</dd></div>
                                 </dl>
                                 {summary.remainingCents < 0n && <p className="subcontract-budget-exceeded" role="alert">
-                                    Suma przekracza aktualną wartość umowy głównej. Zmniejsz wartość umowy przed zapisem.
+                                    Suma przekracza aktualną wartość umowy zleceniodawcy. Zmniejsz wartość umowy przed zapisem.
                                 </p>}
                             </section>}
                             <fieldset className="main-form-section" disabled={saving}>

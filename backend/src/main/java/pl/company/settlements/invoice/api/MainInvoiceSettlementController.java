@@ -52,6 +52,11 @@ public class MainInvoiceSettlementController {
         );
     }
 
+    @GetMapping("/parent-invoice/{id}")
+    public List<MainInvoiceSettlementResponse> findByParentInvoice(@PathVariable Long id) {
+        return service.findAllByParentSubcontractorInvoiceId(id);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public MainInvoiceSettlementResponse create(

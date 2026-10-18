@@ -11,6 +11,7 @@ import pl.company.settlements.payment.domain.PaymentAllocation;
 import pl.company.settlements.payment.model.PaymentUpdateRequest;
 import pl.company.settlements.payment.repository.PaymentAllocationRepository;
 import pl.company.settlements.payment.repository.PaymentRepository;
+import pl.company.settlements.file.domain.DocumentAttachment;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,6 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceGuardTest {
@@ -49,6 +53,14 @@ class PaymentServiceGuardTest {
         assertThrows(IllegalArgumentException.class, () -> service.update(8L, request));
         assertEquals("PLN", payment.getCurrency());
     }
+    @Test
+    void cannotDeleteUnallocatedPaymentWhileItStillOwnsDocuments() {
+        var payment = payment(); payment.getAttachments().add(mock(DocumentAttachment.class));
+        when(paymentRepository.findByIdForUpdate(8L)).thenReturn(Optional.of(payment));
+        assertThrows(IllegalArgumentException.class, () -> service.delete(8L));
+        verify(paymentRepository, never()).delete(any(Payment.class));
+    }
+
     @Test
     void responseCountsStoredAllocationsEvenWhenInverseCollectionIsEmpty() {
         when(paymentRepository.findById(8L)).thenReturn(Optional.of(payment()));

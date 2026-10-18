@@ -1,0 +1,32 @@
+.attachments-panel { margin: 20px 0; padding: 20px; border: 1px solid #d8e0e8; border-radius: 10px; background: #fff; }
+.attachments-heading, .attachments-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.attachments-heading { justify-content: space-between; margin-bottom: 15px; }
+.attachments-heading h3 { margin: 0; font-size: 17px; overflow-wrap: anywhere; }
+.attachments-muted { color: #64748b; font-size: 13px; line-height: 1.6; margin: 6px 0 12px; }
+.attachments-list { padding: 0; margin: 0 0 20px; list-style: none; }
+.attachments-list > li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid #e2e8f0; padding: 16px 0; }
+.attachments-list > li > div:first-child { min-width: 0; flex: 1 1 230px; }
+.attachments-filename, .attachments-description { overflow-wrap: anywhere; }
+.attachments-description { font-size: 14px; white-space: pre-wrap; }
+.attachments-upload { border-top: 1px solid #e2e8f0; padding-top: 18px; }
+.attachments-upload fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.attachments-upload legend { font-size: 16px; font-weight: 600; padding: 0 0 12px; }
+.attachments-upload label { display: block; font-size: 14px; font-weight: 500; margin: 12px 0 7px; }
+.attachments-upload input, .attachments-upload select, .attachments-upload textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #0f172a; padding: 10px; font: inherit; }
+.attachments-upload input[type=file] { font-size: 13px; }
+.attachments-upload input:focus-visible, .attachments-upload select:focus-visible, .attachments-upload textarea:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.attachments-upload button { margin-top: 12px; }
+.attachments-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.attachments-part { margin: 10px 0; padding: 12px; background: #f8fafc; border-radius: 7px; }
+.attachments-confirm { background: #fff7ed; border: 1px solid #fed7aa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+.attachments-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 7px; padding: 12px; }
+.attachments-disclosure { margin-top: 18px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+.attachments-disclosure > summary { cursor: pointer; padding: 14px 16px; color: #1d4ed8; font-weight: 500; }
+.attachments-disclosure > .attachments-panel { margin: 0; border: 0; border-top: 1px solid #e2e8f0; border-radius: 0 0 8px 8px; }
+.attachments-disclosure > div { padding: 0 16px 16px; }
+.attachments-preview { width: min(1100px, 94vw); height: 90vh; max-width: 96vw; max-height: 94vh; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px; }
+.attachments-preview[open] { display: flex; flex-direction: column; }
+.attachments-preview::backdrop { background: rgb(15 23 42 / 65%); }
+.attachments-preview .attachments-heading { flex: 0 0 auto; min-height: 44px; }
+.attachments-preview iframe { width: 100%; flex: 1 1 auto; min-height: 0; border: 1px solid #e2e8f0; }
+@media (max-width: 700px) { .attachments-panel { padding: 15px; } .attachments-form-grid { grid-template-columns: 1fr; gap: 0; } .attachments-preview { padding: 10px; } }

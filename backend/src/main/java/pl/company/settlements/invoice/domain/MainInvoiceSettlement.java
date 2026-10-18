@@ -37,15 +37,13 @@ public class MainInvoiceSettlement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(
-            fetch = FetchType.LAZY,
-            optional = false
-    )
-    @JoinColumn(
-            name = "main_contractor_invoice_id",
-            nullable = false
-    )
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_contractor_invoice_id")
     private MainContractorInvoice mainContractorInvoice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_subcontractor_invoice_id")
+    private SubcontractorInvoice parentSubcontractorInvoice;
 
     @ManyToOne(
             fetch = FetchType.LAZY,
@@ -72,4 +70,11 @@ public class MainInvoiceSettlement {
         this.mainContractorInvoice = mainContractorInvoice;
         this.subcontractorInvoice = subcontractorInvoice;
     }
+    public static MainInvoiceSettlement forSubcontractorParent(SubcontractorInvoice parent, SubcontractorInvoice child) {
+        MainInvoiceSettlement result = new MainInvoiceSettlement();
+        result.parentSubcontractorInvoice = parent;
+        result.subcontractorInvoice = child;
+        return result;
+    }
+
 }

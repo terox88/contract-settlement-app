@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.Subcontract;
+import pl.company.settlements.contract.service.ContractHierarchyValidationService;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.invoice.domain.MainContractorInvoice;
 import pl.company.settlements.invoice.domain.MainInvoiceSettlement;
@@ -26,6 +27,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -39,6 +41,7 @@ class MainInvoiceSettlementServiceTest {
     @Mock private MainContractorInvoiceRepository mainContractorInvoiceRepository;
     @Mock private SubcontractorInvoiceRepository subcontractorInvoiceRepository;
     @Mock private SubcontractorInvoiceService subcontractorInvoiceService;
+    @Mock private ContractHierarchyValidationService hierarchyValidationService;
     @InjectMocks private MainInvoiceSettlementService service;
 
     @Test
@@ -130,6 +133,59 @@ class MainInvoiceSettlementServiceTest {
         request.setMainContractorInvoiceId(10L); request.setInvoice(invoiceRequest); request.setSettledAmount(n("101"));
         assertThrows(IllegalArgumentException.class, () -> service.createWithInvoice(request));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void assignsLowerTierInvoiceToItsDirectParentInvoice() {
+        var root = mainInvoice().getMainContract();
+        var parent = subInvoice(root);
+        var childContract = new Subcontract(root, new Contractor("Dalszy podwykonawca", "3333333333"));
+        childContract.setId(22L); childContract.setParentSubcontract(parent.getSubcontract());
+        var child = new SubcontractorInvoice(childContract);
+        child.setId(41L); child.setCurrency("PLN"); child.setGrossAmount(n("100"));
+        when(subcontractorInvoiceRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(parent));
+        when(subcontractorInvoiceRepository.findByIdForUpdate(41L)).thenReturn(Optional.of(child));
+        when(repository.sumBySubcontractorInvoiceId(41L)).thenReturn(n("0"), n("25"));
+        when(repository.sumByParentSubcontractorInvoiceId(40L)).thenReturn(n("25"));
+        when(repository.save(any(MainInvoiceSettlement.class))).thenAnswer(call -> {
+            MainInvoiceSettlement value = call.getArgument(0); value.setId(9L); return value;
+        });
+        var request = new MainInvoiceSettlementCreateRequest();
+        request.setParentSubcontractorInvoiceId(40L); request.setSubcontractorInvoiceId(41L); request.setSettledAmount(n("25"));
+
+        var response = service.create(request);
+
+        assertEquals(40L, response.getParentSubcontractorInvoiceId());
+        assertNull(response.getMainContractorInvoiceId());
+        assertEquals(n("75"), response.getRemainingToAssignFromSubcontractorInvoice());
+        var order = inOrder(subcontractorInvoiceRepository);
+        order.verify(subcontractorInvoiceRepository).findByIdForUpdate(40L);
+        order.verify(subcontractorInvoiceRepository).findByIdForUpdate(41L);
+    }
+
+    @Test
+    void doesNotAllowSkippingAContractTierWhenAssigningToGW() {
+        var main = mainInvoice(); var child = subInvoice(main.getMainContract());
+        var parent = new Subcontract(main.getMainContract(), new Contractor("Pośredni", "3333333333")); parent.setId(25L);
+        child.getSubcontract().setParentSubcontract(parent);
+        lock(main, child);
+        assertThrows(IllegalArgumentException.class, () -> service.create(createRequest("10")));
+        verify(repository, never()).save(any(MainInvoiceSettlement.class));
+    }
+
+    @Test
+    void rejectsInvoiceFromAnotherBranchOfTheSameRoot() {
+        var root = mainInvoice().getMainContract(); var parent = subInvoice(root);
+        var otherParent = new Subcontract(root, new Contractor("Inny zleceniodawca", "3333333333")); otherParent.setId(25L);
+        var childContract = new Subcontract(root, new Contractor("Dalszy", "4444444444"));
+        childContract.setId(26L); childContract.setParentSubcontract(otherParent);
+        var child = new SubcontractorInvoice(childContract); child.setId(41L); child.setCurrency("PLN");
+        when(subcontractorInvoiceRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(parent));
+        when(subcontractorInvoiceRepository.findByIdForUpdate(41L)).thenReturn(Optional.of(child));
+        var request = new MainInvoiceSettlementCreateRequest();
+        request.setParentSubcontractorInvoiceId(40L); request.setSubcontractorInvoiceId(41L); request.setSettledAmount(n("10"));
+        assertThrows(IllegalArgumentException.class, () -> service.create(request));
+        verify(repository, never()).save(any(MainInvoiceSettlement.class));
     }
 
     private void lock(MainContractorInvoice main, SubcontractorInvoice sub) {

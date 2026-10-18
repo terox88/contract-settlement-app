@@ -10,8 +10,9 @@ import {
 } from './utils/subcontractForm';
 import './SubcontractsCard.css';
 
-export default function SubcontractsCard({ contract }) {
-    const contractId = contract.id;
+export default function SubcontractsCard({ contract, parentSubcontractId = null }) {
+    const contractId = parentSubcontractId ? contract.mainContractId : contract.id;
+    const ownerPath = parentSubcontractId ? `/subcontracts/${parentSubcontractId}` : `/main-contracts/${contractId}`;
     const [subcontracts, setSubcontracts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -24,13 +25,13 @@ export default function SubcontractsCard({ contract }) {
         setLoading(true);
         setError('');
         Promise.all([
-            http.get('/subcontracts', { params: { mainContractId: contractId }, signal: controller.signal }),
-            http.get(`/main-contracts/${contractId}`, { signal: controller.signal }),
+            http.get('/subcontracts', { params: { mainContractId: contractId, ...(parentSubcontractId ? { parentSubcontractId } : { directOnly: true }) }, signal: controller.signal }),
+            http.get(ownerPath, { signal: controller.signal }),
         ])
             .then(([response, mainResponse]) => {
                 if (!active) return;
-                if (String(mainResponse.data?.id) !== String(contractId)) {
-                    throw new Error('Nie można odczytać tej umowy głównej. Spróbuj ponownie.');
+                if (String(mainResponse.data?.id) !== String(parentSubcontractId ?? contractId)) {
+                    throw new Error('Nie można odczytać tej umowy zleceniodawcy. Spróbuj ponownie.');
                 }
                 const rows = readSubcontracts(response.data, contractId);
                 setSubcontracts(rows);
@@ -39,15 +40,15 @@ export default function SubcontractsCard({ contract }) {
             .catch((failure) => { if (active) setError(failure.message); })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; controller.abort(); };
-    }, [contractId, loadAttempt]);
+    }, [contractId, parentSubcontractId, loadAttempt]);
 
     const summary = getSubcontractsSummary(summaryContract, subcontracts);
 
     return (
         <section className="card subcontracts-card" aria-label="Umowy podwykonawcze">
             <div className="subcontracts-heading">
-                <div><h2>Umowy podwykonawcze</h2><p>Umowy powiązane z tą umową główną.</p></div>
-                <Link to={`/main-contracts/${contractId}/subcontracts/new`} className="main-form-button">Dodaj umowę podwykonawczą</Link>
+                <div><h2>Umowy podwykonawcze</h2><p>Bezpośrednie umowy tego zleceniodawcy.</p></div>
+                <Link to={parentSubcontractId ? `/main-contracts/${contractId}/subcontracts/${parentSubcontractId}/children/new` : `/main-contracts/${contractId}/subcontracts/new`} className="main-form-button">Dodaj umowę podwykonawczą</Link>
             </div>
             {loading ? <p className="subcontracts-muted" role="status">Ładowanie umów podwykonawczych...</p>
                 : error ? <div className="error-message" role="alert">
@@ -56,12 +57,12 @@ export default function SubcontractsCard({ contract }) {
                 </div> : <>
                     <dl className="subcontracts-summary">
                         <Metric label="Suma aktualnych wartości podwykonawczych brutto" value={formatBudgetCents(summary?.totalCents)} />
-                        <Metric label="Aktualna wartość umowy głównej brutto" value={formatSubcontractAmount(summaryContract.currentValue)} />
+                        <Metric label="Aktualna wartość umowy zleceniodawcy brutto" value={formatSubcontractAmount(summaryContract.currentValue)} />
                         <Metric label="Pozostało do rozdysponowania" value={formatBudgetCents(summary?.remainingCents)} />
                     </dl>
                     <p className="subcontracts-summary-note">Wartości uwzględniają aneksy. Pozostała kwota dotyczy umów podwykonawczych.</p>
                     {summary?.remainingCents < 0n && <p className="subcontracts-end-warning" role="alert">
-                        Suma umów podwykonawczych przekracza aktualną wartość umowy głównej.
+                        Suma umów podwykonawczych przekracza aktualną wartość umowy zleceniodawcy.
                     </p>}
                     {subcontracts.length === 0 ? <p className="subcontracts-muted">Nie dodano jeszcze umów podwykonawczych.</p>
                     : <div className="subcontracts-list">
@@ -73,6 +74,7 @@ export default function SubcontractsCard({ contract }) {
                                     <p className="subcontracts-muted">NIP: {subcontract.subcontractorTaxId}</p>
                                 </div>
                                 <div className="subcontracts-actions">
+                                    <Link to={`/main-contracts/${contractId}/subcontracts/${subcontract.id}`} className="main-form-button main-form-button-primary">Szczegóły i dalsi podwykonawcy</Link>
                                     <Link to={`/main-contracts/${contractId}/subcontracts/${subcontract.id}/invoices`} className="main-form-button">
                                         Faktury
                                     </Link>

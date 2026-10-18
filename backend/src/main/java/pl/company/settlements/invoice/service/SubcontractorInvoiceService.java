@@ -5,7 +5,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.contract.domain.Subcontract;
-import pl.company.settlements.contract.repository.SubcontractRepository;
+import pl.company.settlements.contract.service.ContractHierarchyValidationService;
+import pl.company.settlements.contract.service.ContractSettlementValidationService;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
 import pl.company.settlements.invoice.domain.SubcontractorStatement;
 import pl.company.settlements.invoice.model.*;
@@ -29,7 +30,8 @@ import java.util.stream.Collectors;
 public class SubcontractorInvoiceService {
 
     private final SubcontractorInvoiceRepository repository;
-    private final SubcontractRepository subcontractRepository;
+    private final ContractHierarchyValidationService hierarchyValidationService;
+    private final ContractSettlementValidationService settlementValidationService;
     private final InvoiceDocumentService invoiceDocumentService;
     private final PaymentAllocationRepository
             paymentAllocationRepository;
@@ -149,13 +151,17 @@ public class SubcontractorInvoiceService {
     @Transactional
     public void delete(Long id) {
         SubcontractorInvoice invoice = findEntityForUpdate(id);
-        if (mainInvoiceSettlementRepository.existsBySubcontractorInvoice_Id(id)) {
+        if (mainInvoiceSettlementRepository.existsBySubcontractorInvoice_Id(id) || mainInvoiceSettlementRepository.existsByParentSubcontractorInvoice_Id(id)) {
             throw new IllegalStateException("Najpierw usuń przypisania tej faktury do faktur GW.");
         }
         if (!invoice.getPaymentAllocations().isEmpty()) {
             throw new IllegalStateException(
                     "Cannot delete invoice that has payment allocations."
             );
+        }
+        if (!invoice.getAttachments().isEmpty()
+                || (invoice.getStatement() != null && !invoice.getStatement().getAttachments().isEmpty())) {
+            throw new IllegalStateException("Przed usunięciem faktury usuń jej załączniki i pliki oświadczenia.");
         }
         repository.delete(invoice);
     }
@@ -170,13 +176,8 @@ public class SubcontractorInvoiceService {
                 request.getGrossAmount()
         );
 
-        Subcontract subcontract = subcontractRepository
-                .findById(request.getSubcontractId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Subcontract with id "
-                                + request.getSubcontractId()
-                                + " does not exist"
-                ));
+        Subcontract subcontract = hierarchyValidationService.lockSubcontract(request.getSubcontractId());
+        settlementValidationService.validateInvoice(subcontract, BigDecimal.ZERO, request.getGrossAmount(), request.getCurrency());
 
         SubcontractorInvoice invoice =
                 new SubcontractorInvoice(subcontract);
@@ -218,6 +219,9 @@ public class SubcontractorInvoiceService {
                 request.getVatAmount(),
                 request.getGrossAmount()
         );
+        Long subcontractId = repository.findSubcontractIdById(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono faktury podwykonawcy."));
+        hierarchyValidationService.lockSubcontract(subcontractId);
         SubcontractorInvoice invoice = findEntityForUpdate(id);
 
         if (!invoice.getPaymentAllocations().isEmpty()) {
@@ -226,9 +230,16 @@ public class SubcontractorInvoiceService {
             );
         }
 
+        if (mainInvoiceSettlementRepository.existsByParentSubcontractorInvoice_Id(id)
+                && !invoice.getCurrency().equalsIgnoreCase(request.getCurrency())) {
+            throw new IllegalArgumentException("Nie można zmienić waluty faktury powiązanej z dalszymi podwykonawcami.");
+        }
         InvoiceAssignmentRules.validateInvoiceChange(request.getGrossAmount(),
                 mainInvoiceSettlementRepository.sumBySubcontractorInvoiceId(id),
                 invoice.getCurrency(), request.getCurrency());
+
+        settlementValidationService.validateInvoice(invoice.getSubcontract(), invoice.getGrossAmount(),
+                request.getGrossAmount(), request.getCurrency());
 
         applyInvoiceData(
                 invoice,
@@ -335,6 +346,8 @@ public class SubcontractorInvoiceService {
                 hasStatement && !settled;
 
         return SubcontractorInvoiceResponse.builder()
+                .parentSubcontractId(invoice.getSubcontract().getParentSubcontract() == null ? null : invoice.getSubcontract().getParentSubcontract().getId())
+                .payerContractorId(invoice.getSubcontract().getPayerContractor() == null ? null : invoice.getSubcontract().getPayerContractor().getId())
                 .documents(documentState.summary())
                 .editable(!documentState.hasPaymentAllocations())
                 .editBlockedReason(documentState.hasPaymentAllocations()
@@ -444,6 +457,8 @@ public class SubcontractorInvoiceService {
                         amountExceeded
                 )
 
+                .assignedToParentInvoicesAmount(assignedToMainInvoicesAmount)
+                .remainingToAssignToParentInvoices(remainingToAssignToMainInvoices)
                 .assignedToMainInvoicesAmount(
                         assignedToMainInvoicesAmount
                 )

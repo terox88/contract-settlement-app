@@ -11,6 +11,8 @@ import java.time.LocalDate;
 public class PaymentAllocationResponse {
 
     private Long id;
+    private Long recipientContractorId;
+    private Long payerContractorId;
 
     private Long paymentId;
     private LocalDate paymentDate;

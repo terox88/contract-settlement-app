@@ -26,6 +26,9 @@ public class SubcontractCreateRequest {
     private Long mainContractId;
 
     @Positive
+    private Long parentSubcontractId;
+
+    @Positive
     private Long subcontractorId;
 
     @Valid

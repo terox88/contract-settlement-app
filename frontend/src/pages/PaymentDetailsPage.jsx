@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import http from '../api/http';
 import PaymentInvoicePicker from '../PaymentInvoicePicker';
+import AttachmentsPanel from '../AttachmentsPanel';
 import PaymentAllocationEditor from '../PaymentAllocationEditor';
 import PaymentAllocationCard from '../PaymentAllocationCard';
-import { contextFromSearch, invoicePaymentsPath, moneyCents, readAllocations, readPayment, targetKey } from '../utils/paymentForm';
+import { contextFromSearch, invoicePaymentsPath, moneyCents, readAllocations, readPayment, paymentScope, targetKey } from '../utils/paymentForm';
 import { formatInvoiceAmount } from '../utils/subcontractorInvoiceForm';
 import { formatAmendmentDate } from '../utils/contractAmendmentForm';
 import './MainContractFormPage.css';
@@ -52,19 +53,21 @@ function PaymentDetails({ paymentId, context, query }) {
         <Link to={context ? invoicePaymentsPath(context) : '/payments'} className="back-link">← {context ? 'Płatności faktury' : 'Przelewy'}</Link>
         <section className="card invoice-list-card"><div className="invoice-heading"><div><h1>Szczegóły przelewu</h1>
             {payment && <><h2>{formatAmendmentDate(payment.paymentDate)} · {formatInvoiceAmount(payment.amount, payment.currency)}</h2>
-                <p className="payment-reference">{payment.bankReference || 'Brak identyfikatora przelewu'}</p></>}
+</>}
         </div>{!loading && !loadError && !saving && <Link className="main-form-button" to={`/payments/${paymentId}/edit${query ? `?${query}` : ''}`}>Edytuj dane przelewu</Link>}</div>
             {success && <p className="settlement-success" role="status">{success}</p>}{saveError && <p className="error-message" role="alert">{saveError}</p>}
             {loading ? <p role="status">Ładowanie przelewu...</p> : loadError ? <div className="error-message" role="alert">{loadError}
                 <button className="retry-button" onClick={() => setAttempt((value) => value + 1)}>Odśwież dane</button></div> : payment && <>
+                {payment.mixedRecipients && <p className="invoice-warning">Ten wcześniej zapisany przelew łączy różnych odbiorców. Usuń błędne przypisania, aby uzupełnić rozliczenie.</p>}
                 {payment.description && <p className="invoice-description">{payment.description}</p>}
+                <AttachmentsPanel ownerType="payment" ownerId={payment.id} title="Potwierdzenia przelewu" />
                 <p className="invoice-totals">Przypisano do faktur: <strong>{formatInvoiceAmount(payment.allocatedAmount, payment.currency)}</strong>
                     {' '}· dostępne: <strong>{formatInvoiceAmount(payment.unallocatedAmount, payment.currency)}</strong> · liczba faktur: {rows.length}.</p>
                 {moneyCents(payment.unallocatedAmount) < 0n && <p className="invoice-warning">Istniejące przypisania przekraczają wartość przelewu. Popraw ich kwoty.</p>}
-                {moneyCents(payment.unallocatedAmount) > 0n && <section className="settlement-panel"><h2>Przypisz do kolejnej faktury</h2>
+                {!payment.mixedRecipients && moneyCents(payment.unallocatedAmount) > 0n && <section className="settlement-panel"><h2>Przypisz do kolejnej faktury</h2>
                     {target ? <><PaymentAllocationEditor key={targetKey(target)} payment={payment} target={target} disabled={saving}
                         onCancel={() => setTarget(null)} onSave={(request) => mutate(request, 'Przypisano przelew do faktury.')} /></>
-                        : <PaymentInvoicePicker key={attempt} currency={payment.currency} initialContractId={context?.contractId} excluded={excluded} disabled={saving} onChoose={setTarget} />}
+                        : <PaymentInvoicePicker key={attempt} currency={payment.currency} initialContractId={context?.contractId} scope={paymentScope(payment)} excluded={excluded} disabled={saving} onChoose={setTarget} />}
                 </section>}
                 {saving && <p role="status">Zapisywanie zmian...</p>}
                 {!rows.length && <p className="invoice-empty">Ten przelew nie ma jeszcze przypisanych faktur.</p>}

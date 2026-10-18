@@ -343,7 +343,7 @@ public class MainContractService {
         BigDecimal currentValue =
                 contract.getCurrentValue();
 
-        BigDecimal subcontractsTotalValue = contract.getSubcontracts().stream()
+        BigDecimal subcontractsTotalValue = contract.getSubcontracts().stream().filter(sub -> sub.getParentSubcontract() == null)
                 .map(Subcontract::getCurrentValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

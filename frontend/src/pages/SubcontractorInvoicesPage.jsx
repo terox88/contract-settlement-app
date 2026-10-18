@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import http from '../api/http';
 import InvoiceDocuments from '../InvoiceDocuments';
+import AttachmentDisclosure from '../AttachmentDisclosure';
+import InvoiceAttachmentWorkspace from '../InvoiceAttachmentWorkspace';
 import { formatAmendmentDate } from '../utils/contractAmendmentForm';
-import { filterInvoices, formatInvoiceAmount, formatInvoiceCents, invoiceTotals, readInvoices } from '../utils/subcontractorInvoiceForm';
+import { filterInvoices, formatInvoiceAmount, formatInvoiceCents, invoiceTotals, readInvoice, readInvoices } from '../utils/subcontractorInvoiceForm';
 import './MainContractFormPage.css';
 import './PaymentsPage.css';
 
@@ -45,10 +47,18 @@ function InvoiceList({ contractId, subcontractId }) {
         return () => { active = false; controller.abort(); };
     }, [contractId, subcontractId, attempt]);
 
+    const alive = useRef(false);
+    useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+    async function refreshDocuments(id) {
+        const { data } = await http.get(`/subcontractor-invoices/${id}`);
+        const fresh = readInvoice(data, subcontractId);
+        if (String(fresh.id) !== String(id) || String(fresh.mainContractId) !== String(contractId)) throw new Error('Nieprawidłowa faktura.');
+        if (alive.current) setInvoices((current) => current.map((invoice) => String(invoice.id) === String(id) ? fresh : invoice));
+    }
     const visible = filterInvoices(invoices, query, settlement, onlyDocumentGaps);
     const totals = invoiceTotals(invoices);
     return <>
-        <Link to={`/main-contracts/${contractId}`} className="back-link">← Szczegóły umowy głównej</Link>
+        <Link to={`/main-contracts/${contractId}/subcontracts/${subcontractId}`} className="back-link">← Szczegóły umowy podwykonawczej</Link>
         <section className="card invoice-list-card">
             <div className="invoice-heading">
                 <div><h1>Faktury podwykonawcy</h1>
@@ -89,7 +99,7 @@ function InvoiceList({ contractId, subcontractId }) {
                                         <span className={`invoice-settlement-badge ${invoice.amountExceeded ? 'invoice-badge-warning' : invoice.settled ? 'invoice-badge-settled' : ''}`}>
                                             {invoice.amountExceeded ? 'Kwota rozliczenia przekroczona' : invoice.settled ? 'Rozliczona' : 'Do rozliczenia'}
                                         </span></div>
-                                    <div className="settlement-actions"><Link className="main-form-button main-form-button-primary" to={`${base}/${invoice.id}/payments`}>Płatności i potrącenia</Link>
+                                    <div className="settlement-actions"><Link className="main-form-button" to={`${base}/${invoice.id}/settlements`}>Rozliczenie dalszych podwykonawców</Link><Link className="main-form-button main-form-button-primary" to={`${base}/${invoice.id}/payments`}>Płatności i potrącenia</Link>
                                     {invoice.editable === true ? <Link to={`${base}/${invoice.id}/edit`} className="main-form-button">Edytuj fakturę</Link>
                                         : <span className="invoice-edit-blocked">{invoice.editBlockedReason || 'Edycja niedostępna.'}</span>}</div>
                                 </div>
@@ -102,13 +112,13 @@ function InvoiceList({ contractId, subcontractId }) {
                                     <Metric label="Netto" value={formatInvoiceAmount(invoice.netAmount, invoice.currency)} />
                                     <Metric label="VAT" value={formatInvoiceAmount(invoice.vatAmount, invoice.currency)} />
                                     <Metric label="Brutto" value={formatInvoiceAmount(invoice.grossAmount, invoice.currency)} />
-                                    <Metric label="W rozliczeniach faktur GW" value={formatInvoiceAmount(invoice.assignedToMainInvoicesAmount, invoice.currency)} />
+                                    <Metric label="W rozliczeniach faktur zleceniodawcy" value={formatInvoiceAmount(invoice.assignedToMainInvoicesAmount, invoice.currency)} />
                                 </dl>
                                 <dl className="invoice-metrics invoice-finances">
                                     <Metric label="Zapłacono" value={formatInvoiceAmount(invoice.paidAmount, invoice.currency)} />
                                     <Metric label="Potrącono" value={formatInvoiceAmount(invoice.deductedAmount, invoice.currency)} />
                                     <Metric label="Saldo do rozliczenia" value={formatInvoiceAmount(invoice.remainingAmount, invoice.currency)} />
-                                    <Metric label="Do przypisania do faktur GW" value={formatInvoiceAmount(invoice.remainingToAssignToMainInvoices, invoice.currency)} />
+                                    <Metric label="Do przypisania do faktur zleceniodawcy" value={formatInvoiceAmount(invoice.remainingToAssignToMainInvoices, invoice.currency)} />
                                 </dl>
                                 {invoice.statementSettlementMismatch && <p className="invoice-warning" role="status">
                                     Oświadczenie potwierdza pełne rozliczenie, ale zapisane płatności i potrącenia go nie potwierdzają.
@@ -117,6 +127,9 @@ function InvoiceList({ contractId, subcontractId }) {
                                     Oświadczenie z {formatAmendmentDate(invoice.statementDate)}{invoice.statementRemarks ? ` · ${invoice.statementRemarks}` : ''}
                                 </p>}
                                 <InvoiceDocuments invoice={invoice} />
+                                <AttachmentDisclosure title="Pliki faktury, oświadczenie i potwierdzenia przelewów">
+                                    <InvoiceAttachmentWorkspace invoice={invoice} onChange={() => refreshDocuments(invoice.id)} />
+                                </AttachmentDisclosure>
                             </article>)}
                         </div>
                     </>}

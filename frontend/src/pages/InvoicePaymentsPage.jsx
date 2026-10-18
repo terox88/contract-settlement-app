@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import http from '../api/http';
 import InvoiceDocuments from '../InvoiceDocuments';
+import InvoiceAttachmentWorkspace from '../InvoiceAttachmentWorkspace';
 import PaymentAllocationCard from '../PaymentAllocationCard';
 import PaymentAllocationEditor from '../PaymentAllocationEditor';
-import { invoicePaymentTotals, loadTarget, moneyCents, readAllocations, readPayments, targetKey, targetQuery } from '../utils/paymentForm';
+import { invoicePaymentTotals, loadTarget, moneyCents, readAllocations, readPayments, paymentMatchesTarget, targetKey, targetQuery } from '../utils/paymentForm';
 import { formatInvoiceAmount, formatInvoiceCents } from '../utils/subcontractorInvoiceForm';
 import { formatDeductionRule } from '../utils/subcontractForm';
 import './MainContractFormPage.css';
@@ -54,8 +55,12 @@ function InvoicePayments({ context, returnMainInvoiceId }) {
         } catch (failure) { if (aliveRef.current) setSaveError(failure.message); }
         finally { busyRef.current = false; if (aliveRef.current) setSaving(false); }
     }
+    async function refreshDocuments() {
+        const fresh = await loadTarget(http, context);
+        if (aliveRef.current) setTarget(fresh);
+    }
     const used = new Set(rows.map((row) => String(row.paymentId)));
-    const available = target ? payments.filter((payment) => !used.has(String(payment.id)) && payment.currency.toUpperCase() === target.currency.toUpperCase()
+    const available = target ? payments.filter((payment) => paymentMatchesTarget(payment, target) && !used.has(String(payment.id)) && payment.currency.toUpperCase() === target.currency.toUpperCase()
         && moneyCents(payment.unallocatedAmount) > 0n) : [];
     const selected = available.find((payment) => String(payment.id) === selectedPaymentId);
     const total = target ? invoicePaymentTotals(target, rows) : null;
@@ -78,11 +83,12 @@ function InvoicePayments({ context, returnMainInvoiceId }) {
                     {' '}W tym widoku zapisujesz łączną kwotę potrąceń przy danym rozliczeniu.</p>}
                 {target.type === 'sub' && <><InvoiceDocuments invoice={target.invoice} />
                     {target.invoice.statementSettlementMismatch && <p className="invoice-warning">Oświadczenie potwierdza pełne rozliczenie, ale płatności i potrącenia go nie potwierdzają.</p>}</>}
+                <InvoiceAttachmentWorkspace invoice={target.invoice} type={target.type} allocations={rows} onChange={refreshDocuments} />
                 <section className="settlement-panel"><h2>Przypisz istniejący przelew</h2>
                     <label htmlFor="invoice-existing-payment">Przelew w walucie {target.currency}</label>
                     <select id="invoice-existing-payment" disabled={saving} value={selectedPaymentId} onChange={(event) => setSelectedPaymentId(event.target.value)}>
                         <option value="">Wybierz przelew</option>{available.map((payment) => <option key={payment.id} value={payment.id}>
-                            {payment.paymentDate} · {payment.bankReference || `Przelew ${payment.id}`} · dostępne {formatInvoiceAmount(payment.unallocatedAmount, payment.currency)}</option>)}</select>
+                            {payment.paymentDate} · dostępne {formatInvoiceAmount(payment.unallocatedAmount, payment.currency)}</option>)}</select>
                     {!available.length && <p className="invoice-muted">Brak kolejnych przelewów z dostępną kwotą. Przelewy już powiązane z fakturą zmienisz poniżej.</p>}
                     {selected && <PaymentAllocationEditor key={selected.id} payment={selected} target={target} disabled={saving}
                         onSave={(request) => mutate(request, 'Przypisano przelew do faktury.')} />}

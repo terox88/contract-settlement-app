@@ -26,6 +26,7 @@ public final class SubcontractSpecification {
                 shortDescriptionContains(filter.getShortDescription()),
                 hasSubcontractor(filter.getSubcontractorId()),
                 hasMainContract(filter.getMainContractId()),
+                parent(filter.getParentSubcontractId(), filter.getDirectOnly()),
                 hasInvestmentTask(filter.getInvestmentTaskId()),
                 hasContractType(filter.getContractType()),
                 hasRemunerationType(filter.getRemunerationType()),
@@ -34,6 +35,12 @@ public final class SubcontractSpecification {
                 currentValueFrom(filter.getCurrentValueFrom()),
                 currentValueTo(filter.getCurrentValueTo())
         );
+    }
+
+    private static Specification<Subcontract> parent(Long parentId, Boolean directOnly) {
+        if (parentId != null) return (root, query, cb) -> cb.equal(root.get("parentSubcontract").get("id"), parentId);
+        if (Boolean.TRUE.equals(directOnly)) return (root, query, cb) -> cb.isNull(root.get("parentSubcontract"));
+        return Specification.unrestricted();
     }
 
     private static Specification<Subcontract> contractNumberContains(

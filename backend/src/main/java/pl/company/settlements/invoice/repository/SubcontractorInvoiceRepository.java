@@ -26,6 +26,12 @@ public interface SubcontractorInvoiceRepository
     @Query("select i from SubcontractorInvoice i where i.id = :id")
     Optional<SubcontractorInvoice> findByIdForUpdate(@Param("id") Long id);
 
+    @Query("select i.subcontract.id from SubcontractorInvoice i where i.id = :id")
+    Optional<Long> findSubcontractIdById(@Param("id") Long id);
+
+    @Query("select i.subcontract.mainContract.id from SubcontractorInvoice i where i.id = :id")
+    Optional<Long> findMainContractIdById(@Param("id") Long id);
+
 
     @Query("""
             SELECT COALESCE(SUM(i.grossAmount), 0)

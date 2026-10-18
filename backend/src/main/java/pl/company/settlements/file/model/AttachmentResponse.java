@@ -14,6 +14,8 @@ public class AttachmentResponse {
 
     private AttachmentType type;
 
+    private String typeLabel;
+
     private String description;
 
     private Long storedFileId;

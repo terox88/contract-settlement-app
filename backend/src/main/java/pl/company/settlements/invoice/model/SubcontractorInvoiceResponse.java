@@ -21,6 +21,8 @@ public class SubcontractorInvoiceResponse {
      * Contract context
      */
     private Long subcontractId;
+    private Long parentSubcontractId;
+    private Long payerContractorId;
     private String subcontractNumber;
 
     private Long mainContractId;
@@ -78,6 +80,10 @@ public class SubcontractorInvoiceResponse {
     /*
      * Assignment to main contractor invoices
      */
+    private BigDecimal assignedToParentInvoicesAmount;
+    private BigDecimal remainingToAssignToParentInvoices;
+
+    // Compatibility aliases for existing API clients.
     private BigDecimal assignedToMainInvoicesAmount;
 
     private BigDecimal remainingToAssignToMainInvoices;

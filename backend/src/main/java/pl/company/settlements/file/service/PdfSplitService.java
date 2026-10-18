@@ -22,16 +22,20 @@ public class PdfSplitService {
 
         if (!StringUtils.hasText(parts)) {
             throw new IllegalArgumentException(
-                    "PDF split definition cannot be empty"
+                    "Podaj strony dla każdej części PDF."
             );
         }
 
         String[] selections =
                 parts.split(";", -1);
 
+        if (selections.length > 20) {
+            throw new IllegalArgumentException("Jednorazowo można utworzyć najwyżej 20 części PDF.");
+        }
+
         if (selections.length < 2) {
             throw new IllegalArgumentException(
-                    "PDF split must contain at least two parts"
+                    "Podział PDF wymaga co najmniej dwóch części."
             );
         }
 
@@ -47,7 +51,7 @@ public class PdfSplitService {
 
             if (selection.isEmpty()) {
                 throw new IllegalArgumentException(
-                        "PDF split contains an empty part"
+                        "Podaj strony dla każdej części PDF."
                 );
             }
 

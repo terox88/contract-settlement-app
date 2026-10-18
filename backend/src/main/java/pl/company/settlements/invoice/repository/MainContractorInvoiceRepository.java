@@ -21,6 +21,9 @@ public interface MainContractorInvoiceRepository
     @Query("select i from MainContractorInvoice i where i.id = :id")
     Optional<MainContractorInvoice> findByIdForUpdate(@Param("id") Long id);
 
+    @Query("select i.mainContract.id from MainContractorInvoice i where i.id = :id")
+    Optional<Long> findMainContractIdById(@Param("id") Long id);
+
 
     boolean existsByMainContract_IdAndInvoiceNumber(
             Long mainContractId,

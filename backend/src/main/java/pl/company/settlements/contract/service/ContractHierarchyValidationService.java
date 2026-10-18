@@ -20,6 +20,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.HashSet;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class ContractHierarchyValidationService {
 
     private final MainContractRepository mainContractRepository;
     private final SubcontractRepository subcontractRepository;
+    private final ContractSettlementValidationService settlementValidationService;
 
     public MainContract lockMainContract(Long id) {
         return mainContractRepository.findByIdForUpdate(id)
@@ -50,78 +53,98 @@ public class ContractHierarchyValidationService {
     }
 
     public void validateSubcontractCreate(MainContract main, SubcontractCreateRequest request) {
+        Contract parent = request.getParentSubcontractId() == null ? main : findSubcontract(request.getParentSubcontractId());
+        if (parent instanceof Subcontract sub && !Objects.equals(sub.getMainContract().getId(), main.getId())) {
+            throw new IllegalArgumentException("Umowa zleceniodawcy należy do innej umowy głównej.");
+        }
         String taxId = request.getNewSubcontractor() == null ? null : request.getNewSubcontractor().getTaxId();
-        ContractHierarchyRules.State proposed = ContractHierarchyRules.state(
-                request.getInitialValue(), request.getContractDate(), request.getInitialEndDate(),
-                List.of(), request.getSubcontractorId(), taxId);
-        validateProposedSubcontract(main, null, proposed);
+        var proposed = ContractHierarchyRules.state(request.getInitialValue(), request.getContractDate(),
+                request.getInitialEndDate(), List.of(), request.getSubcontractorId(), taxId);
+        validateProposedSubcontract(main, parent, null, proposed);
     }
 
     public void validateResolvedSubcontractor(MainContract main, Contractor subcontractor) {
-        ContractHierarchyRules.validateContractor(currentState(main), subcontractor.getId(), subcontractor.getTaxId());
+        validateResolvedSubcontractor(main, null, subcontractor);
+    }
+
+    public void validateResolvedSubcontractor(MainContract main, Subcontract parent, Contractor subcontractor) {
+        validateAncestors(parent == null ? main : parent, subcontractor.getId(), subcontractor.getTaxId());
     }
 
     public void validateSubcontractUpdate(Subcontract subcontract, SubcontractUpdateRequest request) {
         Contractor contractor = subcontract.getSubcontractor();
-        ContractHierarchyRules.State proposed = ContractHierarchyRules.state(
-                request.getInitialValue(), request.getContractDate(), request.getInitialEndDate(),
-                changes(subcontract), contractor.getId(), contractor.getTaxId());
-        validateProposedSubcontract(subcontract.getMainContract(), subcontract.getId(), proposed);
+        var proposed = ContractHierarchyRules.state(request.getInitialValue(), request.getContractDate(),
+                request.getInitialEndDate(), changes(subcontract), contractor.getId(), contractor.getTaxId());
+        validateProposedSubcontract(subcontract.getMainContract(), parentOf(subcontract), subcontract.getId(), proposed);
+        validateChildren(subcontract, proposed);
+        settlementValidationService.validateContractValue(subcontract, proposed.value());
     }
 
     public void validateMainContractUpdate(MainContract main, MainContractUpdateRequest request) {
         Contractor contractor = main.getMainContractor();
-        ContractHierarchyRules.State proposed = ContractHierarchyRules.state(
-                request.getInitialValue(), request.getContractDate(), request.getInitialEndDate(),
-                changes(main), contractor.getId(), contractor.getTaxId());
+        var proposed = ContractHierarchyRules.state(request.getInitialValue(), request.getContractDate(),
+                request.getInitialEndDate(), changes(main), contractor.getId(), contractor.getTaxId());
         validateChildren(main, proposed);
+        settlementValidationService.validateContractValue(main, proposed.value());
     }
 
     public void validateAmendment(Contract contract, Long excludedAmendmentId, LocalDate effectiveDate,
                                   BigDecimal valueChange, LocalDate newEndDate) {
         List<ContractHierarchyRules.Change> proposedChanges = new ArrayList<>(changes(contract));
-        if (excludedAmendmentId != null) {
-            proposedChanges.removeIf(change -> excludedAmendmentId.equals(change.id()));
-        }
+        if (excludedAmendmentId != null) proposedChanges.removeIf(change -> excludedAmendmentId.equals(change.id()));
         proposedChanges.add(new ContractHierarchyRules.Change(null, effectiveDate, valueChange, newEndDate));
         Contractor contractor = contractor(contract);
-        ContractHierarchyRules.State proposed = ContractHierarchyRules.state(
-                contract.getInitialValue(), contract.getContractDate(), contract.getInitialEndDate(),
-                proposedChanges, contractor.getId(), contractor.getTaxId());
-        if (contract instanceof MainContract main) validateChildren(main, proposed);
-        else if (contract instanceof Subcontract subcontract) {
-            validateProposedSubcontract(subcontract.getMainContract(), subcontract.getId(), proposed);
+        var proposed = ContractHierarchyRules.state(contract.getInitialValue(), contract.getContractDate(),
+                contract.getInitialEndDate(), proposedChanges, contractor.getId(), contractor.getTaxId());
+        if (contract instanceof Subcontract sub) {
+            validateProposedSubcontract(sub.getMainContract(), parentOf(sub), sub.getId(), proposed);
         }
+        validateChildren(contract, proposed);
+        settlementValidationService.validateContractValue(contract, proposed.value());
     }
 
-    private void validateChildren(MainContract main, ContractHierarchyRules.State proposedMain) {
+    private Contract parentOf(Subcontract sub) {
+        return sub.getParentSubcontract() == null ? sub.getMainContract() : sub.getParentSubcontract();
+    }
+
+    private List<Subcontract> childrenOf(Contract parent) {
+        Long rootId = parent instanceof MainContract main ? main.getId() : ((Subcontract) parent).getMainContract().getId();
+        return subcontractRepository.findAllByMainContract_Id(rootId).stream().filter(child ->
+                parent instanceof MainContract ? child.getParentSubcontract() == null
+                        : child.getParentSubcontract() != null && Objects.equals(child.getParentSubcontract().getId(), parent.getId())).toList();
+    }
+
+    private void validateChildren(Contract parent, ContractHierarchyRules.State proposedParent) {
         List<ContractHierarchyRules.State> children = new ArrayList<>();
-        for (Subcontract child : subcontractRepository.findAllByMainContract_Id(main.getId())) {
-            try {
-                ContractHierarchyRules.State state = currentState(child);
-                ContractHierarchyRules.validateSubcontract(proposedMain, state);
-                children.add(state);
-            } catch (IllegalArgumentException error) {
-                throw new IllegalArgumentException("Umowa podwykonawcza " + child.getContractNumber()
-                        + ": " + error.getMessage(), error);
-            }
+        for (Subcontract child : childrenOf(parent)) {
+            var state = currentState(child);
+            ContractHierarchyRules.validateSubcontract(proposedParent, state);
+            children.add(state);
         }
-        ContractHierarchyRules.validateSubcontractsValue(proposedMain, children);
+        ContractHierarchyRules.validateSubcontractsValue(proposedParent, children);
     }
 
-    private void validateProposedSubcontract(MainContract main, Long replacedSubcontractId,
+    private void validateProposedSubcontract(MainContract main, Contract parent, Long replacedId,
                                              ContractHierarchyRules.State proposed) {
-        ContractHierarchyRules.State mainState = currentState(main);
-        ContractHierarchyRules.validateSubcontract(mainState, proposed);
+        var parentState = currentState(parent);
+        ContractHierarchyRules.validateSubcontract(parentState, proposed);
+        validateAncestors(parent, proposed.contractorId(), proposed.taxId());
         List<ContractHierarchyRules.State> children = new ArrayList<>();
-        for (Subcontract child : subcontractRepository.findAllByMainContract_Id(main.getId())) {
-            // Edycja zastępuje aktualny stan jednej umowy. Nie doliczamy go drugi raz.
-            if (replacedSubcontractId == null || !replacedSubcontractId.equals(child.getId())) {
-                children.add(currentState(child));
-            }
+        for (Subcontract child : childrenOf(parent)) {
+            if (replacedId == null || !replacedId.equals(child.getId())) children.add(currentState(child));
         }
         children.add(proposed);
-        ContractHierarchyRules.validateSubcontractsValue(mainState, children);
+        ContractHierarchyRules.validateSubcontractsValue(parentState, children);
+    }
+
+    private void validateAncestors(Contract parent, Long contractorId, String taxId) {
+        var seen = new HashSet<Long>();
+        Contract ancestor = parent;
+        while (ancestor != null) {
+            if (!seen.add(ancestor.getId())) throw new IllegalArgumentException("Wykryto cykl umów podwykonawczych.");
+            ContractHierarchyRules.validateContractor(currentState(ancestor), contractorId, taxId);
+            ancestor = ancestor instanceof Subcontract sub ? parentOf(sub) : null;
+        }
     }
 
     private ContractHierarchyRules.State currentState(Contract contract) {

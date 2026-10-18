@@ -7,7 +7,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.Subcontract;
-import pl.company.settlements.contract.repository.SubcontractRepository;
+import pl.company.settlements.contract.service.ContractHierarchyValidationService;
+import pl.company.settlements.contract.service.ContractSettlementValidationService;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
 import pl.company.settlements.invoice.model.SubcontractorInvoiceCreateRequest;
@@ -15,6 +16,7 @@ import pl.company.settlements.invoice.model.SubcontractorInvoiceUpdateRequest;
 import pl.company.settlements.invoice.repository.MainInvoiceSettlementRepository;
 import pl.company.settlements.invoice.repository.SubcontractorInvoiceRepository;
 import pl.company.settlements.payment.domain.PaymentAllocation;
+import pl.company.settlements.file.domain.DocumentAttachment;
 import pl.company.settlements.payment.repository.PaymentAllocationRepository;
 import pl.company.settlements.task.domain.InvestmentTask;
 
@@ -32,11 +34,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class SubcontractorInvoiceFormServiceTest {
     @Mock private SubcontractorInvoiceRepository repository;
-    @Mock private SubcontractRepository subcontractRepository;
+    @Mock private ContractHierarchyValidationService hierarchyValidationService;
+    @Mock private ContractSettlementValidationService settlementValidationService;
     @Mock private PaymentAllocationRepository paymentAllocationRepository;
     @Mock private MainInvoiceSettlementRepository mainInvoiceSettlementRepository;
     @Mock private InvoiceDocumentService invoiceDocumentService;
@@ -53,7 +59,7 @@ class SubcontractorInvoiceFormServiceTest {
         request.setGrossAmount(new BigDecimal("123.00"));
         request.setVatRates(List.of("23", " zw ", "23"));
         request.setCurrency("pln");
-        when(subcontractRepository.findById(21L)).thenReturn(Optional.of(subcontract()));
+        when(hierarchyValidationService.lockSubcontract(21L)).thenReturn(subcontract());
         when(repository.save(any(SubcontractorInvoice.class))).thenAnswer(call -> {
             SubcontractorInvoice invoice = call.getArgument(0);
             invoice.setId(4L);
@@ -70,9 +76,23 @@ class SubcontractorInvoiceFormServiceTest {
     }
 
     @Test
+    void contractLimitFailureRejectsInvoiceBeforeSaving() {
+        var sub = subcontract();
+        var request = new SubcontractorInvoiceCreateRequest(); request.setSubcontractId(21L);
+        request.setNetAmount(new BigDecimal("120000.01")); request.setVatAmount(BigDecimal.ZERO);
+        request.setGrossAmount(new BigDecimal("120000.01")); request.setCurrency("PLN");
+        when(hierarchyValidationService.lockSubcontract(21L)).thenReturn(sub);
+        doThrow(new IllegalArgumentException("Limit umowy" )).when(settlementValidationService)
+                .validateInvoice(sub, BigDecimal.ZERO, request.getGrossAmount(), "PLN");
+        assertThrows(IllegalArgumentException.class, () -> service.create(request));
+        verify(repository, never()).save(any(SubcontractorInvoice.class));
+    }
+
+    @Test
     void existingPaymentAllocationBlocksEditingBeforeMutation() {
         var invoice = invoice();
         invoice.getPaymentAllocations().add(mock(PaymentAllocation.class));
+        when(repository.findSubcontractIdById(4L)).thenReturn(Optional.of(21L));
         when(repository.findByIdForUpdate(4L)).thenReturn(Optional.of(invoice));
         var request = new SubcontractorInvoiceUpdateRequest();
         request.setNetAmount(new BigDecimal("200.00"));
@@ -107,6 +127,7 @@ class SubcontractorInvoiceFormServiceTest {
     @Test
     void cannotReduceInvoiceBelowAlreadyAssignedAmount() {
         var invoice = invoice(); invoice.setCurrency("PLN");
+        when(repository.findSubcontractIdById(4L)).thenReturn(Optional.of(21L));
         when(repository.findByIdForUpdate(4L)).thenReturn(Optional.of(invoice));
         when(mainInvoiceSettlementRepository.sumBySubcontractorInvoiceId(4L)).thenReturn(new BigDecimal("100"));
         var request = new SubcontractorInvoiceUpdateRequest();
@@ -115,6 +136,14 @@ class SubcontractorInvoiceFormServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.update(4L, request));
         assertEquals(new BigDecimal("123.00"), invoice.getGrossAmount());
         verifyNoInteractions(invoiceDocumentService);
+    }
+
+    @Test
+    void cannotDeleteInvoiceWhileItStillOwnsDocuments() {
+        var invoice = invoice(); invoice.getAttachments().add(mock(DocumentAttachment.class));
+        when(repository.findByIdForUpdate(4L)).thenReturn(Optional.of(invoice));
+        assertThrows(IllegalStateException.class, () -> service.delete(4L));
+        verify(repository, never()).delete(any(SubcontractorInvoice.class));
     }
 
     @Test
