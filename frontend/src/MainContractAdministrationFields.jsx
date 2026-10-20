@@ -1,6 +1,6 @@
 import { changeSecurityType, emptyAdministration, formatAdministrationDate, isDocumentSecurity, warrantyEndDate } from './utils/contractAdministration';
 
-export default function MainContractAdministrationFields({ value, options, onChange, errors, disabled }) {
+export default function MainContractAdministrationFields({ value, contractDate, options, onChange, errors, disabled }) {
     const form = { ...emptyAdministration(), ...value };
     const document = options.securityTypes.find(option => option.value === form.securityType)?.document ?? isDocumentSecurity(form.securityType);
     const date = warrantyEndDate(form.actualCompletionDate, form.warrantyMonths);
@@ -25,7 +25,7 @@ export default function MainContractAdministrationFields({ value, options, onCha
         <legend>Zakończenie, gwarancja i zabezpieczenia</legend>
         <p className="main-form-hint">Dane opcjonalne. Faktyczne zakończenie może przypadać przed terminem umownym lub po nim. Okres gwarancji i rękojmi liczymy wspólnie od tej daty.</p>
         <div className="main-form-grid">
-            {field('actualCompletionDate', 'Faktyczne zakończenie umowy', { type: 'date' })}
+            {field('actualCompletionDate', 'Faktyczne zakończenie umowy', { type: 'date', min: contractDate || undefined })}
             {field('warrantyMonths', 'Gwarancja i rękojmia — miesiące', { type: 'number', inputMode: 'numeric', min: 0, max: 1200, step: 1 })}
         </div>
         <p className="main-form-hint">Koniec gwarancji i rękojmi: <strong>{date ? formatAdministrationDate(date) : 'Uzupełnij faktyczne zakończenie i liczbę miesięcy.'}</strong></p>

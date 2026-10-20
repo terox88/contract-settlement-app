@@ -9,7 +9,9 @@ public enum AttachmentType {
     SUBCONTRACTOR_STATEMENT("Oświadczenie podwykonawcy"),
     ACCEPTANCE_PROTOCOL("Protokół odbioru"),
     NECESSITY_PROTOCOL("Protokół konieczności"),
-    WORK_PROGRESS_REPORT("Protokół przerobu");
+    WORK_PROGRESS_REPORT("Protokół przerobu"),
+    INSURANCE_DOCUMENT("Dokument ubezpieczenia"),
+    GUARANTEE_DOCUMENT("Dokument gwarancji bankowej/ubezpieczeniowej");
 
     private final String label;
 

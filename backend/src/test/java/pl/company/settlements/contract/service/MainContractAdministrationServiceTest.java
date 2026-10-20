@@ -10,6 +10,7 @@ import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.RemunerationType;
 import pl.company.settlements.contract.model.MainContractAdministrationRequest;
 import pl.company.settlements.contract.model.MainContractUpdateRequest;
+import pl.company.settlements.contract.model.MainContractCreateRequest;
 import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.repository.ContractorRepository;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class MainContractAdministrationServiceTest {
@@ -48,11 +50,11 @@ class MainContractAdministrationServiceTest {
         Contractor contractor = new Contractor("Wykonawca", "1234563218"); contractor.setId(2L);
         contract = new MainContract(task, contractor); contract.setId(7L);
         contract.setContractNumber("OLD"); contract.setInitialValue(new BigDecimal("1000"));
-        when(repository.findByIdForUpdate(7L)).thenReturn(Optional.of(contract));
     }
 
     @Test
     void updatesAndReturnsActualCompletionAndComputedWarrantyEnd() {
+        lockExisting();
         enableResponse();
         MainContractUpdateRequest request = update(); request.setAdministration(administration(60));
         var response = service.update(7L, request);
@@ -62,6 +64,7 @@ class MainContractAdministrationServiceTest {
 
     @Test
     void oldClientOmittingNewObjectPreservesExistingAdministration() {
+        lockExisting();
         enableResponse();
         var stored = MainContractAdministrationRules.validatedValue(administration(60));
         contract.setAdministration(stored);
@@ -71,9 +74,50 @@ class MainContractAdministrationServiceTest {
 
     @Test
     void invalidAdministrationIsRejectedBeforeChangingContract() {
+        lockExisting();
         MainContractUpdateRequest request = update(); request.setAdministration(administration(-1));
         assertThrows(IllegalArgumentException.class, () -> service.update(7L, request));
         assertEquals("OLD", contract.getContractNumber());
+    }
+
+    @Test
+    void creatingBeforeSigningIsRejectedBeforeSavingContractOrCreatingContractor() {
+        MainContractCreateRequest request = new MainContractCreateRequest();
+        request.setContractDate(LocalDate.parse("2026-10-21"));
+        request.setAdministration(administration(60));
+        var error = assertThrows(IllegalArgumentException.class, () -> service.create(request));
+        assertEquals("Faktyczna data zakończenia umowy nie może być wcześniejsza niż data jej zawarcia.", error.getMessage());
+        verifyNoInteractions(repository, tasks, contractors, contractorService, limits);
+    }
+
+    @Test
+    void editingCannotMoveSigningAfterActualCompletion() {
+        lockExisting();
+        MainContractUpdateRequest request = update(); request.setContractDate(LocalDate.parse("2026-10-21"));
+        request.setAdministration(administration(60));
+        assertThrows(IllegalArgumentException.class, () -> service.update(7L, request));
+        assertEquals("OLD", contract.getContractNumber());
+    }
+
+    @Test
+    void omittedAdministrationStillChecksStoredCompletionAgainstNewSigningDate() {
+        lockExisting();
+        contract.setAdministration(MainContractAdministrationRules.validatedValue(administration(60)));
+        MainContractUpdateRequest request = update(); request.setContractDate(LocalDate.parse("2026-10-21"));
+        assertThrows(IllegalArgumentException.class, () -> service.update(7L, request));
+        assertEquals("OLD", contract.getContractNumber());
+    }
+
+    @Test
+    void completionOnSigningDateIsAccepted() {
+        lockExisting(); enableResponse();
+        MainContractUpdateRequest request = update(); request.setContractDate(LocalDate.parse("2026-10-20"));
+        request.setAdministration(administration(60));
+        assertEquals(LocalDate.parse("2026-10-20"), service.update(7L, request).getAdministration().actualCompletionDate());
+    }
+
+    private void lockExisting() {
+        when(repository.findByIdForUpdate(7L)).thenReturn(Optional.of(contract));
     }
 
     private void enableResponse() {

@@ -46,6 +46,15 @@ public final class PdfPageSelectionCases {
                     AttachmentOwner.AMENDMENT.validate(AttachmentType.AMENDMENT);
                     rejects(() -> AttachmentOwner.CONTRACT.validate(AttachmentType.AMENDMENT));
                 }),
+                new Scenario("Dokumenty polis i gwarancji należą do umów oraz aneksów", () -> {
+                    for (AttachmentType type : new AttachmentType[]{AttachmentType.INSURANCE_DOCUMENT, AttachmentType.GUARANTEE_DOCUMENT}) {
+                        AttachmentOwner.CONTRACT.validate(type);
+                        AttachmentOwner.AMENDMENT.validate(type);
+                        for (AttachmentOwner owner : new AttachmentOwner[]{AttachmentOwner.MAIN_INVOICE, AttachmentOwner.SUB_INVOICE, AttachmentOwner.PAYMENT, AttachmentOwner.STATEMENT}) {
+                            rejects(() -> owner.validate(type));
+                        }
+                    }
+                }),
                 new Scenario("Każdy rodzaj ma etykietę i obsługującego właściciela", () -> {
                     for (AttachmentType type : AttachmentType.values()) {
                         if (type.getLabel().isBlank()) throw new AssertionError(type);

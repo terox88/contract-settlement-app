@@ -59,6 +59,10 @@ public final class MainContractAdministrationCases {
         yes(full.securityValidityModeLabel().equals(SecurityValidityMode.TWO_STAGE.getLabel()));
         yes(full.retentionSecurityAmount().compareTo(new BigDecimal("3000")) == 0);
         yes(full.ocInsuranceValidUntil().equals(date("2020-01-01")));
+        reject(() -> MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), date("2026-10-19")));
+        MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), date("2026-10-20")); checks++;
+        MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), date("2026-10-21")); checks++;
+        MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), null); checks++;
         return checks;
     }
     private static MainContractAdministrationRequest value(String completed, Integer months, PerformanceSecurityType type,

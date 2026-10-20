@@ -163,6 +163,8 @@ public class MainContractService {
             MainContractCreateRequest request
     ) {
         MainContractAdministration administration = MainContractAdministrationRules.validatedValue(request.getAdministration());
+        MainContractAdministrationRules.validateCompletionDate(request.getContractDate(),
+                administration == null ? null : administration.getActualCompletionDate());
         InvestmentTask investmentTask = investmentTaskRepository
                 .findById(request.getInvestmentTaskId())
                 .orElseThrow(() -> new IllegalArgumentException(
@@ -227,6 +229,10 @@ public class MainContractService {
         );
 
         MainContractAdministration administration = MainContractAdministrationRules.validatedValue(request.getAdministration());
+        MainContractAdministration effectiveAdministration = request.getAdministration() == null
+                ? contract.getAdministration() : administration;
+        MainContractAdministrationRules.validateCompletionDate(request.getContractDate(),
+                effectiveAdministration == null ? null : effectiveAdministration.getActualCompletionDate());
         hierarchyValidationService.validateMainContractUpdate(contract, request);
 
         applyContractData(

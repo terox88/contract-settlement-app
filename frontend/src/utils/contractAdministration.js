@@ -44,11 +44,14 @@ export function expiryNotice(validUntil, today = localToday()) {
     return { days, expired: false, text: days === 0 ? 'Ważność upływa dzisiaj.' : days === 1
         ? 'Do końca ważności pozostał 1 dzień.' : `Do końca ważności pozostało ${days} dni.` };
 }
-export function validateAdministration(value) {
+export function validateAdministration(value, contractDate = null) {
     const form = { ...emptyAdministration(), ...value }, errors = {};
     const error = (name, message) => { errors[`administration.${name}`] = message; };
     for (const name of ['actualCompletionDate', 'ocInsuranceValidUntil', 'carInsuranceValidUntil', 'securityValidUntil', 'retentionSecurityValidUntil']) {
         if (form[name] && !parseDay(form[name])) error(name, 'Podaj prawidłową datę.');
+    }
+    if (parseDay(contractDate) && parseDay(form.actualCompletionDate) && form.actualCompletionDate < contractDate) {
+        error('actualCompletionDate', 'Faktyczna data zakończenia umowy nie może być wcześniejsza niż data jej zawarcia.');
     }
     if (form.warrantyMonths !== '' && (!/^\d+$/.test(String(form.warrantyMonths)) || Number(form.warrantyMonths) > 1200)) {
         error('warrantyMonths', 'Podaj całkowitą liczbę miesięcy od 0 do 1200.');
@@ -80,9 +83,9 @@ export function validateAdministration(value) {
     if (document && form.securityValidityMode === 'SINGLE' && (form.retentionSecurityAmount || form.retentionSecurityValidUntil)) error('securityValidityMode', 'Drugi etap wymaga wariantu dwóch terminów.');
     return errors;
 }
-export function administrationPayload(value) {
+export function administrationPayload(value, contractDate = null) {
     const form = { ...emptyAdministration(), ...value };
-    if (Object.keys(validateAdministration(form)).length) throw new Error('Popraw dodatkowe dane umowy.');
+    if (Object.keys(validateAdministration(form, contractDate)).length) throw new Error('Popraw dodatkowe dane umowy.');
     return Object.fromEntries(FIELDS.map(name => [name, form[name] === '' ? null : name === 'warrantyMonths'
         ? Number(form[name]) : ['securityAmount', 'retentionSecurityAmount'].includes(name) ? parseBudgetAmount(form[name]).amount : form[name]]));
 }

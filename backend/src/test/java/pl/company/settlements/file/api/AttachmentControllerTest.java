@@ -7,6 +7,7 @@ import pl.company.settlements.file.service.DocumentAttachmentService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -27,5 +28,16 @@ class AttachmentControllerTest {
         var controller = new AttachmentController(mock(DocumentAttachmentService.class));
         assertFalse(controller.types(AttachmentOwner.SUB_INVOICE).stream()
                 .anyMatch(option -> option.value() == AttachmentType.PAYMENT_CONFIRMATION));
+    }
+    @Test
+    void contractsAndAmendmentsOfferInsuranceAndGuaranteeDocuments() {
+        var controller = new AttachmentController(mock(DocumentAttachmentService.class));
+        for (AttachmentOwner owner : new AttachmentOwner[]{AttachmentOwner.CONTRACT, AttachmentOwner.AMENDMENT}) {
+            var options = controller.types(owner);
+            assertTrue(options.stream().anyMatch(option -> option.value() == AttachmentType.INSURANCE_DOCUMENT
+                    && option.label().equals("Dokument ubezpieczenia")));
+            assertTrue(options.stream().anyMatch(option -> option.value() == AttachmentType.GUARANTEE_DOCUMENT
+                    && option.label().equals("Dokument gwarancji bankowej/ubezpieczeniowej")));
+        }
     }
 }

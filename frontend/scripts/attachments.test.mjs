@@ -112,3 +112,15 @@ test('Niepoprawne daty oświadczenia i data sprzed wystawienia faktury są odrzu
         assert.throws(() => buildStatementRequest({ id: 40, issueDate: '2026-10-01' }, null, { statementDate }));
     }
 });
+
+test('Dokumenty polis i gwarancji zachowują kategorię przy wysyłaniu do umowy i aneksu', () => {
+    const choices = readAttachmentTypes([
+        { value: 'INSURANCE_DOCUMENT', label: 'Dokument ubezpieczenia' },
+        { value: 'GUARANTEE_DOCUMENT', label: 'Dokument gwarancji bankowej/ubezpieczeniowej' },
+    ]);
+    for (const owner of ['contract', 'amendment']) for (const choice of choices) {
+        const request = buildAttachmentRequest(owner, 7, form({ type: choice.value }), choices);
+        assert.equal(request.url, attachmentEndpoint(owner, 7));
+        assert.equal(request.data.get('type'), choice.value);
+    }
+});

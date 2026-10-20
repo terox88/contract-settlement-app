@@ -147,7 +147,8 @@ function MainContractForm({ taskId, contractId }) {
 
     function changeContract(field, value) {
         setContract((current) => ({ ...current, [field]: value }));
-        setErrors((current) => ({ ...current, [field]: '' }));
+        setErrors((current) => ({ ...current, [field]: '',
+            ...(field === 'contractDate' ? { 'administration.actualCompletionDate': '' } : {}) }));
         setSaveError('');
     }
 
@@ -243,7 +244,7 @@ function MainContractForm({ taskId, contractId }) {
                                 </div>
                             </fieldset>
 
-                            <MainContractAdministrationFields value={contract.administration} options={administrationOptions}
+                            <MainContractAdministrationFields value={contract.administration} contractDate={contract.contractDate} options={administrationOptions}
                                 errors={errors} disabled={saving} onChange={(administration) => {
                                     setContract(current => ({ ...current, administration }));
                                     setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith('administration.'))));

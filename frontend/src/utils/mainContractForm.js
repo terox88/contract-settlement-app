@@ -50,7 +50,7 @@ export function contractToForm(data) {
 }
 
 export function validateContractData(contract, contractTypes = []) {
-    const errors = validateAdministration(contract.administration);
+    const errors = validateAdministration(contract.administration, contract.contractDate);
     if (!contract.contractNumber.trim()) errors.contractNumber = 'Podaj numer umowy.';
     else if (contract.contractNumber.trim().length > 255) errors.contractNumber = 'Numer może mieć maksymalnie 255 znaków.';
     if (!validDate(contract.contractDate)) errors.contractDate = 'Podaj prawidłową datę zawarcia.';
@@ -105,7 +105,7 @@ export function validateMainContractForm(contract, contractor, nip, lookup, sele
 
 export function buildMainContractUpdatePayload(contract) {
     return {
-        administration: administrationPayload(contract.administration),
+        administration: administrationPayload(contract.administration, contract.contractDate),
         contractNumber: contract.contractNumber.trim(),
         contractDate: contract.contractDate,
         initialValue: parseAmount(contract.initialValue).amount,

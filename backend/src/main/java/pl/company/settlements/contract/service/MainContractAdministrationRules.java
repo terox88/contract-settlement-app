@@ -69,6 +69,12 @@ public final class MainContractAdministrationRules {
         return value;
     }
 
+    public static void validateCompletionDate(LocalDate contractDate, LocalDate actualCompletionDate) {
+        if (contractDate != null && actualCompletionDate != null && actualCompletionDate.isBefore(contractDate)) {
+            throw new IllegalArgumentException("Faktyczna data zakończenia umowy nie może być wcześniejsza niż data jej zawarcia.");
+        }
+    }
+
     public static LocalDate warrantyEndDate(LocalDate completed, Integer months) {
         if (completed == null || months == null) return null;
         try {

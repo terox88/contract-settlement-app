@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { administrationPayload, administrationToForm, changeSecurityType, emptyAdministration, expiryNotice,
     formatAdministrationDate, readAdministrationOptions, validateAdministration, warrantyEndDate } from '../src/utils/contractAdministration.js';
-import { buildMainContractPayload, buildMainContractUpdatePayload, contractToForm, emptyContract } from '../src/utils/mainContractForm.js';
+import { buildMainContractPayload, buildMainContractUpdatePayload, contractToForm, emptyContract, validateContractData } from '../src/utils/mainContractForm.js';
 const document = () => ({ ...emptyAdministration(), securityType: 'BANK_GUARANTEE', securityValidityMode: 'SINGLE', securityValidUntil: '2026-12-31' });
 const validContract = () => ({ ...emptyContract(), contractNumber: 'UG/1', contractDate: '2026-10-20', initialValue: '1000', vatRate: '23', contractType: 'SERVICE', remunerationType: 'LUMP_SUM' });
 test('Miesiące kalendarzowe: koniec miesiąca, rok przestępny i 0 miesięcy', () => {
@@ -66,7 +66,7 @@ test('Przejście na gotówkę/brak i jeden termin usuwa niewłaściwe dane zamia
     assert.ok(validateAdministration({ ...value, securityValidityMode: 'SINGLE' })['administration.securityValidityMode']);
 });
 test('POST i PUT zachowują oraz czyszczą wszystkie nowe dane, także po odczycie umowy', () => {
-    const original = validContract(); original.administration = { ...document(), actualCompletionDate: '2026-10-10', warrantyMonths: '60', securityAmount: '123,45' };
+    const original = { ...validContract(), contractDate: '2026-10-01' }; original.administration = { ...document(), actualCompletionDate: '2026-10-10', warrantyMonths: '60', securityAmount: '123,45' };
     const payload = buildMainContractUpdatePayload(original);
     assert.equal(payload.administration.warrantyMonths, 60);
     assert.equal(payload.administration.securityAmount, '123.45');
@@ -82,4 +82,23 @@ test('Opcje zabezpieczenia i polskie etykiety pochodzą z backendu', () => {
     const options = { securityTypes: [{ value: 'BANK_GUARANTEE', label: 'Gwarancja bankowa', document: true }], validityModes: [{ value: 'SINGLE', label: 'Jeden' }, { value: 'TWO_STAGE', label: 'Dwa' }] };
     assert.equal(readAdministrationOptions(options), options);
     assert.throws(() => readAdministrationOptions({ ...options, validityModes: [] }));
+});
+
+test('Faktyczne zakończenie nie poprzedza zawarcia: POST i PUT odrzucają wcześniejszą datę', () => {
+    const contract = { ...validContract(), administration: { ...emptyAdministration(), actualCompletionDate: '2026-10-19' } };
+    const errors = validateContractData(contract, [{ value: 'SERVICE', label: 'Usługa' }]);
+    assert.match(errors['administration.actualCompletionDate'], /data.*zawarcia/);
+    assert.throws(() => buildMainContractUpdatePayload(contract));
+    assert.throws(() => buildMainContractPayload(7, contract, {}, '1234563218', { id: 12 }));
+});
+test('Faktyczne zakończenie w dniu zawarcia i później jest dozwolone, puste pozostaje opcjonalne', () => {
+    for (const actualCompletionDate of ['', '2026-10-20', '2026-10-21']) {
+        const contract = { ...validContract(), administration: { ...emptyAdministration(), actualCompletionDate } };
+        assert.equal(validateContractData(contract, [{ value: 'SERVICE', label: 'Usługa' }])['administration.actualCompletionDate'], undefined);
+        assert.equal(buildMainContractUpdatePayload(contract).administration.actualCompletionDate, actualCompletionDate || null);
+    }
+});
+test('Zmiana daty zawarcia nie omija kontroli istniejącego zakończenia', () => {
+    const contract = { ...validContract(), contractDate: '2026-10-22', administration: { ...emptyAdministration(), actualCompletionDate: '2026-10-21' } };
+    assert.ok(validateContractData(contract, [{ value: 'SERVICE', label: 'Usługa' }])['administration.actualCompletionDate']);
 });
