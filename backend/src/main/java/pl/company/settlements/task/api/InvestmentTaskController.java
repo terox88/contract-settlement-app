@@ -29,10 +29,11 @@ public class InvestmentTaskController {
     @GetMapping
     public List<InvestmentTaskResponse> findAll(
             @RequestParam(required = false)
-            InvestmentTaskStatus status
+            InvestmentTaskStatus status,
+            @RequestParam(required = false) String implementer
     ) {
         return service.findAll(
-                status
+                status, implementer
         );
     }
 

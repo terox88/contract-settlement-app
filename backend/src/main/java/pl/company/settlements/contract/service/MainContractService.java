@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.contract.domain.ContractType;
 import pl.company.settlements.contract.domain.MainContract;
+import pl.company.settlements.contract.domain.MainContractAdministration;
 import pl.company.settlements.contract.domain.RemunerationType;
 import pl.company.settlements.contract.domain.Subcontract;
 import pl.company.settlements.contract.model.MainContractCreateRequest;
@@ -161,6 +162,7 @@ public class MainContractService {
     public MainContractResponse create(
             MainContractCreateRequest request
     ) {
+        MainContractAdministration administration = MainContractAdministrationRules.validatedValue(request.getAdministration());
         InvestmentTask investmentTask = investmentTaskRepository
                 .findById(request.getInvestmentTaskId())
                 .orElseThrow(() -> new IllegalArgumentException(
@@ -194,6 +196,7 @@ public class MainContractService {
                 request.getShortDescription()
         );
 
+        contract.setAdministration(administration);
         MainContract savedContract = repository.save(contract);
 
         if (request.getFinancialLimitYears() != null) {
@@ -223,6 +226,7 @@ public class MainContractService {
                 request.getInitialEndDate()
         );
 
+        MainContractAdministration administration = MainContractAdministrationRules.validatedValue(request.getAdministration());
         hierarchyValidationService.validateMainContractUpdate(contract, request);
 
         applyContractData(
@@ -237,6 +241,8 @@ public class MainContractService {
                 request.getRemunerationType(),
                 request.getShortDescription()
         );
+
+        if (request.getAdministration() != null) contract.setAdministration(administration);
 
         BigDecimal invoicedAmount =
                 mainContractorInvoiceRepository
@@ -358,6 +364,7 @@ public class MainContractService {
                 );
 
         return MainContractResponse.builder()
+                .administration(MainContractAdministrationRules.toResponse(contract.getAdministration()))
                 .id(contract.getId())
 
                 .investmentTaskId(

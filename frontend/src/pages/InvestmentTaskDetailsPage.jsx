@@ -186,6 +186,8 @@ export default function InvestmentTaskDetailsPage() {
 
                 </div>
 
+                <p className="task-details-description"><strong>Realizator:</strong> {task.implementer || 'Nie uzupełniono'}</p>
+
                 {task.description && (
                     <p className="task-details-description">
                         {task.description}

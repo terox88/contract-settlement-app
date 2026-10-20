@@ -2,6 +2,7 @@ package pl.company.settlements.task.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.task.domain.InvestmentTask;
 import pl.company.settlements.task.domain.InvestmentTaskStatus;
@@ -9,6 +10,7 @@ import pl.company.settlements.task.model.InvestmentTaskCreateRequest;
 import pl.company.settlements.task.model.InvestmentTaskResponse;
 import pl.company.settlements.task.model.InvestmentTaskUpdateRequest;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
+import pl.company.settlements.task.repository.InvestmentTaskSpecification;
 
 import java.util.List;
 
@@ -27,13 +29,22 @@ public class InvestmentTaskService {
             InvestmentTaskStatus status
     ) {
 
+        return findAll(status, null);
+    }
+
+    public List<InvestmentTaskResponse> findAll(InvestmentTaskStatus status, String implementer) {
+        String normalizedImplementer = normalizeImplementer(implementer);
+        if (normalizedImplementer != null) {
+            return repository.findAll(InvestmentTaskSpecification.fromFilters(status, normalizedImplementer),
+                            Sort.by("taskNumber").ascending())
+                    .stream().map(this::toResponse).toList();
+        }
         List<InvestmentTask> tasks;
 
         if (status == null) {
 
             tasks = repository.findAll(
-                    org.springframework.data.domain.Sort
-                            .by("taskNumber")
+                    Sort.by("taskNumber")
                             .ascending()
             );
 
@@ -56,6 +67,7 @@ public class InvestmentTaskService {
             InvestmentTaskCreateRequest request
     ) {
         String taskNumber = normalizeTaskNumber(request.getTaskNumber());
+        String implementer = normalizeImplementer(request.getImplementer());
 
         if (repository.existsByTaskNumber(taskNumber)) {
             throw new IllegalArgumentException(
@@ -74,6 +86,7 @@ public class InvestmentTaskService {
                 trimToNull(request.getDescription())
         );
 
+        task.setImplementer(implementer);
         task.setStatus(
                 request.getStatus() != null
                         ? request.getStatus()
@@ -93,6 +106,7 @@ public class InvestmentTaskService {
         InvestmentTask task = findEntityById(id);
 
         String taskNumber = normalizeTaskNumber(request.getTaskNumber());
+        String implementer = normalizeImplementer(request.getImplementer());
 
         repository.findByTaskNumber(taskNumber)
                 .filter(existing -> !existing.getId().equals(id))
@@ -109,6 +123,7 @@ public class InvestmentTaskService {
         task.setDescription(
                 trimToNull(request.getDescription())
         );
+        task.setImplementer(implementer);
         task.setStatus(
                 request.getStatus()
         );
@@ -135,6 +150,14 @@ public class InvestmentTaskService {
         return taskNumber.trim();
     }
 
+    private String normalizeImplementer(String value) {
+        String result = trimToNull(value);
+        if (result != null && result.length() > 255) {
+            throw new IllegalArgumentException("Realizator może mieć najwyżej 255 znaków.");
+        }
+        return result;
+    }
+
     private String trimToNull(String value) {
         if (value == null) {
             return null;
@@ -153,6 +176,7 @@ public class InvestmentTaskService {
                 .taskNumber(task.getTaskNumber())
                 .name(task.getName())
                 .description(task.getDescription())
+                .implementer(task.getImplementer())
                 .status(task.getStatus())
                 .statusLabel(task.getStatus().getLabel())
                 .build();

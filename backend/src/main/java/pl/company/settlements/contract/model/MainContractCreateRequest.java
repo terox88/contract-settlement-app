@@ -23,6 +23,9 @@ import java.util.List;
 @Setter
 public class MainContractCreateRequest {
 
+    @Valid
+    private MainContractAdministrationRequest administration;
+
     @NotNull
     private Long investmentTaskId;
 

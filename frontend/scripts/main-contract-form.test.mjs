@@ -1,3 +1,4 @@
+import { administrationPayload, emptyAdministration } from '../src/utils/contractAdministration.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -34,6 +35,7 @@ test('PUT zawiera dane umowy, dokładne kwoty i null przy czyszczeniu pól', () 
         newMainContractor: { name: 'Firma' }, currentValue: 99000,
     });
     assert.deepEqual(payload, {
+        administration: administrationPayload(emptyAdministration()),
         contractNumber: 'UG/1/2026', contractDate: '2026-10-14',
         initialValue: '12345.67', vatRate: '23.00',
         initialStartDate: null, initialEndDate: null,

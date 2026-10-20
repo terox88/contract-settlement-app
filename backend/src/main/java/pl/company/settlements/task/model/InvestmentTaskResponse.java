@@ -12,6 +12,7 @@ public class InvestmentTaskResponse {
     private String taskNumber;
     private String name;
     private String description;
+    private String implementer;
     private InvestmentTaskStatus status;
     private String statusLabel;
 }

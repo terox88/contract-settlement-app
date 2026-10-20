@@ -10,6 +10,7 @@ import {
 
 import http from '../api/http';
 
+import MainContractAdministrationCard from '../MainContractAdministrationCard';
 import FinancialLimitsCard from '../FinancialLimitsCard';
 import ContractPenaltiesCard from '../ContractPenaltiesCard';
 import AttachmentDisclosure from '../AttachmentDisclosure';
@@ -348,6 +349,8 @@ export default function MainContractDetailsPage() {
                 </div>
 
             </section>
+
+            <MainContractAdministrationCard administration={contract.administration} />
 
             <AttachmentDisclosure ownerType="contract" ownerId={contract.id} title="Dokumenty umowy — dodaj lub otwórz" />
 

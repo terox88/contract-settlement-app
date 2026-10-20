@@ -12,6 +12,8 @@ import java.time.LocalDate;
 @Builder
 public class MainContractResponse {
 
+    private MainContractAdministrationResponse administration;
+
     private Long id;
 
     private Long investmentTaskId;

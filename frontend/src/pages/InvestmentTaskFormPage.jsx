@@ -13,6 +13,7 @@ const EMPTY_FORM = {
     taskNumber: '',
     name: '',
     description: '',
+    implementer: '',
     status: 'IN_PROGRESS',
 };
 
@@ -70,6 +71,7 @@ function InvestmentTaskForm({ taskId }) {
                     taskNumber: task.taskNumber ?? '',
                     name: task.name ?? '',
                     description: task.description ?? '',
+                    implementer: task.implementer ?? '',
                     status: task.status ?? '',
                 });
             } catch (error) {
@@ -116,6 +118,8 @@ function InvestmentTaskForm({ taskId }) {
             errors.status = 'Wybierz status zadania.';
         }
 
+        if ((form.implementer ?? '').trim().length > 255) errors.implementer = 'Realizator może mieć najwyżej 255 znaków.';
+
         setFieldErrors(errors);
         setSaveError('');
 
@@ -129,6 +133,7 @@ function InvestmentTaskForm({ taskId }) {
             taskNumber: form.taskNumber.trim(),
             name: form.name.trim(),
             description: form.description.trim() || null,
+            implementer: (form.implementer ?? '').trim() || null,
             status: form.status,
         };
 
@@ -268,6 +273,14 @@ function InvestmentTaskForm({ taskId }) {
                                     )}
                                 </div>
 
+                                <div className="task-form-field task-form-field-wide">
+                                    <label htmlFor="implementer">Realizator</label>
+                                    <input id="implementer" name="implementer" type="text" value={form.implementer}
+                                        maxLength={255} onChange={handleChange} aria-invalid={Boolean(fieldErrors.implementer)}
+                                        aria-describedby={fieldErrors.implementer ? 'implementer-error' : 'implementer-hint'} />
+                                    <p id="implementer-hint" className="task-form-hint">Dział realizujący zadanie, np. Dział Inwestycji.</p>
+                                    {fieldErrors.implementer && <p id="implementer-error" className="task-form-field-error" role="alert">{fieldErrors.implementer}</p>}
+                                </div>
                                 <div className="task-form-field task-form-field-wide">
                                     <label htmlFor="description">Opis</label>
                                     <textarea

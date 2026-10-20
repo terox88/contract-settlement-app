@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import http from '../api/http';
+import './InvestmentTaskFilters.css';
 
 const FILTERS = [
     {
@@ -45,39 +46,25 @@ export default function InvestmentTaskListPage() {
     const [error, setError] =
         useState(null);
 
+    const [implementerDraft, setImplementerDraft] = useState('');
+    const [implementerFilter, setImplementerFilter] = useState('');
+    const [attempt, setAttempt] = useState(0);
+
     useEffect(() => {
-        loadTasks();
-    }, [selectedStatus]);
-
-    async function loadTasks() {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const params =
-                selectedStatus === 'ALL'
-                    ? {}
-                    : {
-                        status: selectedStatus,
-                    };
-
-            const response =
-                await http.get(
-                    '/investment-tasks',
-                    {
-                        params,
-                    }
-                );
-
-            setTasks(response.data);
-
-        } catch (error) {
-            setError(error.message);
-
-        } finally {
-            setLoading(false);
-        }
-    }
+        let active = true;
+        const controller = new AbortController();
+        setLoading(true); setError(null);
+        const params = { ...(selectedStatus === 'ALL' ? {} : { status: selectedStatus }),
+            ...(implementerFilter ? { implementer: implementerFilter } : {}) };
+        http.get('/investment-tasks', { params, signal: controller.signal })
+            .then(response => {
+                if (!Array.isArray(response.data)) throw new Error('Nie można odczytać listy zadań.');
+                if (active) setTasks(response.data);
+            })
+            .catch(failure => { if (active) setError(failure.message); })
+            .finally(() => { if (active) setLoading(false); });
+        return () => { active = false; controller.abort(); };
+    }, [selectedStatus, implementerFilter, attempt]);
 
     return (
         <>
@@ -99,6 +86,18 @@ export default function InvestmentTaskListPage() {
                     Dodaj zadanie
                 </Link>
             </div>
+
+            <form className="task-implementer-filter" onSubmit={event => {
+                event.preventDefault(); setImplementerFilter(implementerDraft.trim());
+            }}>
+                <div className="task-form-field"><label htmlFor="task-implementer-filter">Realizator</label>
+                    <input id="task-implementer-filter" value={implementerDraft} maxLength={255}
+                        placeholder="Nazwa lub fragment nazwy działu" onChange={event => setImplementerDraft(event.target.value)} />
+                </div>
+                <button className="task-form-button" type="submit">Filtruj</button>
+                <button className="task-form-button" type="button" onClick={() => { setImplementerDraft(''); setImplementerFilter(''); }}>Wyczyść realizatora</button>
+                {implementerFilter && <p role="status">Realizator zawiera: <strong>{implementerFilter}</strong></p>}
+            </form>
 
             <div className="task-filters">
                 {FILTERS.map((filter) => (
@@ -128,7 +127,7 @@ export default function InvestmentTaskListPage() {
                     <button
                         type="button"
                         className="retry-button"
-                        onClick={loadTasks}
+                        onClick={() => setAttempt(value => value + 1)}
                     >
                         Spróbuj ponownie
                     </button>
@@ -177,6 +176,7 @@ export default function InvestmentTaskListPage() {
                                 {task.name}
                             </h2>
 
+                            <p className="task-description"><strong>Realizator:</strong> {task.implementer || 'Nie uzupełniono'}</p>
                             {task.description && (
                                 <p className="task-description">
                                     {task.description}

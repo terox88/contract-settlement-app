@@ -1,5 +1,6 @@
 package pl.company.settlements.contract.model;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +16,9 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class MainContractUpdateRequest {
+
+    @Valid
+    private MainContractAdministrationRequest administration;
 
     @NotBlank
     private String contractNumber;

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import http from '../api/http';
+import MainContractAdministrationFields from '../MainContractAdministrationFields';
+import { readAdministrationOptions } from '../utils/contractAdministration';
 import InitialFinancialLimitsFields from '../InitialFinancialLimitsFields';
 import { isMissingBudget } from '../utils/budgetForm';
 import { validateInitialFinancialLimits } from '../utils/financialLimitForm';
@@ -39,6 +41,7 @@ function MainContractForm({ taskId, contractId }) {
     const [saving, setSaving] = useState(false);
     const [budget, setBudget] = useState(null);
     const [initialLimitRows, setInitialLimitRows] = useState(null);
+    const [administrationOptions, setAdministrationOptions] = useState({ securityTypes: [], validityModes: [] });
     const limitRows = initialLimitRows ?? [{ year: contract.contractDate.slice(0, 4), amount: contract.initialValue }];
     const formRef = useRef(null);
     const savingRef = useRef(false);
@@ -64,11 +67,13 @@ function MainContractForm({ taskId, contractId }) {
             http.get('/contract-types', { signal: controller.signal }),
             isEditing ? Promise.resolve(null) : http.get(`/budgets/investment-task/${taskId}`, { signal: controller.signal })
                 .catch((error) => { if (isMissingBudget(error, taskId)) return { data: null }; throw error; }),
+            http.get('/main-contract-administration/options', { signal: controller.signal }),
         ])
-            .then(([response, typesResponse, budgetResponse]) => {
+            .then(([response, typesResponse, budgetResponse, administrationResponse]) => {
                 if (!active) return;
                 const options = readContractTypeOptions(typesResponse.data);
                 setContractTypes(options);
+                setAdministrationOptions(readAdministrationOptions(administrationResponse.data));
                 if (isEditing) {
                     setLoadedContract(response.data);
                     setContract(contractToForm(response.data));
@@ -207,7 +212,7 @@ function MainContractForm({ taskId, contractId }) {
                     <h1>{isEditing ? 'Edytuj umowę główną' : 'Dodaj umowę główną'}</h1>
                     {task && <p>{task.taskNumber} · {task.name}</p>}
                     {loadedContract && <p>Umowa {loadedContract.contractNumber} · Zadanie {loadedContract.investmentTaskNumber}</p>}
-                    {isEditing && <p>Edytujesz dane pierwotnej umowy. Zmiany wynikające z aneksów wprowadzaj w aneksach.</p>}
+                    {isEditing && <p>Edytujesz dane pierwotnej umowy oraz informacje o zakończeniu i zabezpieczeniach. Zmiany wynikające z aneksów wprowadzaj w aneksach.</p>}
                     <p>Pola oznaczone * są wymagane.</p>
                 </div>
 
@@ -237,6 +242,13 @@ function MainContractForm({ taskId, contractId }) {
                                     {contractField('shortDescription', 'Krótki opis', { multiline: true, wide: true, maxLength: 500 })}
                                 </div>
                             </fieldset>
+
+                            <MainContractAdministrationFields value={contract.administration} options={administrationOptions}
+                                errors={errors} disabled={saving} onChange={(administration) => {
+                                    setContract(current => ({ ...current, administration }));
+                                    setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith('administration.'))));
+                                    setSaveError('');
+                                }} />
 
                             {!isEditing && <InitialFinancialLimitsFields contract={contract} budget={budget} rows={limitRows}
                                 onChange={(rows) => { setInitialLimitRows(rows); setErrors((current) => ({ ...current, financialLimitYears: '' })); setSaveError(''); }}

@@ -1,3 +1,4 @@
+import { administrationPayload, administrationToForm, emptyAdministration, validateAdministration } from './contractAdministration.js';
 import { parseBudgetAmount as parseAmount } from './budgetForm.js';
 
 export const REMUNERATION_TYPES = [
@@ -22,7 +23,7 @@ export function emptyContract() {
     return {
         contractNumber: '', contractDate: today, initialValue: '', vatRate: '23',
         initialStartDate: '', initialEndDate: '', contractType: '',
-        remunerationType: '', shortDescription: '',
+        remunerationType: '', shortDescription: '', administration: emptyAdministration(),
     };
 }
 
@@ -43,13 +44,13 @@ export function validDate(value) {
 }
 
 export function contractToForm(data) {
-    return Object.fromEntries(Object.keys(emptyContract()).map((field) => [
+    return { ...Object.fromEntries(Object.keys(emptyContract()).filter(field => field !== 'administration').map((field) => [
         field, String(data[field] ?? ''),
-    ]));
+    ])), administration: administrationToForm(data.administration) };
 }
 
 export function validateContractData(contract, contractTypes = []) {
-    const errors = {};
+    const errors = validateAdministration(contract.administration);
     if (!contract.contractNumber.trim()) errors.contractNumber = 'Podaj numer umowy.';
     else if (contract.contractNumber.trim().length > 255) errors.contractNumber = 'Numer może mieć maksymalnie 255 znaków.';
     if (!validDate(contract.contractDate)) errors.contractDate = 'Podaj prawidłową datę zawarcia.';
@@ -104,6 +105,7 @@ export function validateMainContractForm(contract, contractor, nip, lookup, sele
 
 export function buildMainContractUpdatePayload(contract) {
     return {
+        administration: administrationPayload(contract.administration),
         contractNumber: contract.contractNumber.trim(),
         contractDate: contract.contractDate,
         initialValue: parseAmount(contract.initialValue).amount,

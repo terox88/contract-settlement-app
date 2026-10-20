@@ -18,6 +18,9 @@ import java.util.List;
 @Table(name = "main_contract")
 public class MainContract extends Contract {
 
+    @Embedded
+    private MainContractAdministration administration;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "main_contractor_id", nullable = false)
     private Contractor mainContractor;

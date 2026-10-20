@@ -1,0 +1,4 @@
+.task-implementer-filter { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 18px; margin: 18px 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; }
+.task-implementer-filter .task-form-field { flex: 1 1 250px; }
+.task-implementer-filter input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 7px; font: inherit; }
+.task-implementer-filter p { flex-basis: 100%; margin: 0; color: #475569; overflow-wrap: anywhere; }

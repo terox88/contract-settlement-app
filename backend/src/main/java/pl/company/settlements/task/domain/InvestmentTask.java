@@ -30,6 +30,9 @@ public class InvestmentTask {
     @Column(length = 2000)
     private String description;
 
+    @Column(length = 255)
+    private String implementer;
+
     @OneToOne(mappedBy = "investmentTask", cascade = CascadeType.ALL, orphanRemoval = true)
     private Budget budget;
 
