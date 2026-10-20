@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import http from './api/http';
 import AttachmentNameEditor from './AttachmentNameEditor';
+import FileDropZone from './FileDropZone';
 import { attachmentTitle, attachmentDownloadName } from './utils/attachmentNames';
 import { attachmentEndpoint, attachmentError, attachmentOwner, attachmentSize, buildAttachmentRequest,
     isPdf, loadAttachmentBlob, readAttachments, readAttachmentTypes, saveAttachmentBlob, validateAttachmentForm } from './utils/attachments';
@@ -117,9 +118,10 @@ function UploadForm({ ownerType, ownerId, types, disabled, onSave }) {
     }
     return <form className="attachments-upload" ref={formRef} onSubmit={save} noValidate>
         <fieldset disabled={disabled}><legend>Dodaj dokument</legend>
-            <div className="attachments-form-grid"><div><label htmlFor={`${prefix}-file`}>Plik *</label>
-                <input id={`${prefix}-file`} name="file" type="file" required aria-invalid={Boolean(errors.file)} aria-describedby={errors.file ? `${prefix}-file-error` : undefined}
-                    onChange={(event) => { setForm((current) => ({ ...current, file: event.target.files?.[0] ?? null, mode: 'all', pages: '', parts: ['', ''] })); setErrors({}); }} />
+            <div className="attachments-form-grid"><div>
+                <FileDropZone id={`${prefix}-file`} name="file" file={form.file} required disabled={disabled}
+                    invalid={Boolean(errors.file)} describedBy={errors.file ? `${prefix}-file-error` : undefined}
+                    onChange={(file) => { setForm((current) => ({ ...current, file, mode: 'all', pages: '', parts: ['', ''] })); setErrors({}); }} />
                 {errors.file && <p id={`${prefix}-file-error`} className="main-form-field-error" role="alert">{errors.file}</p>}</div>
                 <div><label htmlFor={`${prefix}-type`}>Rodzaj dokumentu *</label>
                     <select id={`${prefix}-type`} name="type" value={form.type} onChange={(event) => change('type', event.target.value)} required

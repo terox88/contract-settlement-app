@@ -70,6 +70,10 @@ export function readAllocations(data, { paymentId, target, currency } = {}) {
     });
 }
 export function targetKey(target) { return `${target.type}:${target.id}`; }
+// Saldo finansowe z API; ręczne potwierdzenie kompletu dokumentów GW nie oznacza zapłaty.
+export function invoiceRemainingToPay(target) {
+    return moneyCents(target?.invoice?.remainingAmount) ?? null;
+}
 export function invoicePaymentsPath(target) {
     const path = target.type === 'main' ? `/main-contracts/${target.contractId}/invoices/${target.id}/payments`
         : `/main-contracts/${target.contractId}/subcontracts/${target.subcontractId}/invoices/${target.id}/payments`;

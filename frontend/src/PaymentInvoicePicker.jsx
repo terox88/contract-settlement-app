@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import http from './api/http';
-import { loadSameRecipientTargets, readTarget, samePaymentParties, targetKey } from './utils/paymentForm';
+import { invoiceRemainingToPay, loadSameRecipientTargets, readTarget, samePaymentParties, targetKey } from './utils/paymentForm';
+import { centsToAmount } from './utils/mainInvoiceSettlement';
 import { formatInvoiceAmount } from './utils/subcontractorInvoiceForm';
+import './PaymentInvoicePicker.css';
 
 export default function PaymentInvoicePicker({ currency, onChoose, excluded = [], disabled = false, initialContractId = '', scope = null }) {
     const [contracts, setContracts] = useState([]);
@@ -12,6 +14,7 @@ export default function PaymentInvoicePicker({ currency, onChoose, excluded = []
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [attempt, setAttempt] = useState(0);
+    const [onlyUnsettled, setOnlyUnsettled] = useState(false);
     useEffect(() => {
         let active = true;
         const controller = new AbortController();
@@ -43,10 +46,12 @@ export default function PaymentInvoicePicker({ currency, onChoose, excluded = []
         return () => { active = false; controller.abort(); };
     }, [contractId, type, scope?.type, scope?.recipientContractorId, scope?.payerContractorId, attempt]);
     const needle = query.trim().toLocaleLowerCase('pl-PL');
-    const visible = invoices.filter((target) => target.currency.toUpperCase() === currency.trim().toUpperCase()
+    const matching = invoices.filter((target) => target.currency.toUpperCase() === currency.trim().toUpperCase()
         && (!scope || samePaymentParties(scope, target))
         && !excluded.includes(targetKey(target))
         && `${target.number} ${target.name}`.toLocaleLowerCase('pl-PL').includes(needle));
+    const visible = matching.filter((target) => !onlyUnsettled || (invoiceRemainingToPay(target) ?? 0n) > 0n);
+    const missingBalances = onlyUnsettled ? matching.filter((target) => invoiceRemainingToPay(target) == null).length : 0;
     return <fieldset disabled={disabled} className="settlement-fields payment-picker"><legend>Wybierz fakturę tego samego odbiorcy</legend>
         {!scope && <><label htmlFor="payment-picker-contract">Umowa główna</label>
         <select id="payment-picker-contract" value={contractId} onChange={(event) => { setContractId(event.target.value); setInvoices([]); }}>
@@ -59,13 +64,21 @@ export default function PaymentInvoicePicker({ currency, onChoose, excluded = []
         {loading ? <p role="status">Ładowanie faktur...</p> : error ? <div role="alert" className="error-message">{error}
             <button type="button" onClick={() => setAttempt((value) => value + 1)}>Spróbuj ponownie</button></div> : (scope || contractId) && <>
             <label htmlFor="payment-picker-search">Numer faktury lub wykonawca</label><input id="payment-picker-search" value={query} onChange={(event) => setQuery(event.target.value)} />
+            <label className="payment-picker-unsettled"><input type="checkbox" checked={onlyUnsettled}
+                aria-describedby="payment-picker-unsettled-hint" onChange={(event) => setOnlyUnsettled(event.target.checked)} />
+                Pokaż tylko nierozliczone</label>
+            <p className="invoice-muted" id="payment-picker-unsettled-hint">Faktury z kwotą pozostałą do rozliczenia większą od zera. U podwykonawców saldo uwzględnia wpłaty i potrącenia.</p>
+            {missingBalances > 0 && <p className="invoice-warning" role="alert">Brak salda finansowego dla faktur: {missingBalances}. Filtr je pomija. Odśwież widok po aktualizacji backendu.</p>}
             <label htmlFor="payment-picker-invoice">Dodaj fakturę do przelewu · {currency}</label>
             <select id="payment-picker-invoice" value="" onChange={(event) => {
                 const target = visible.find((invoice) => targetKey(invoice) === event.target.value);
                 if (target) onChoose(target);
             }}><option value="">Wybierz fakturę</option>{visible.map((target) => <option key={targetKey(target)} value={targetKey(target)}>
-                {target.name} · {target.number} · brutto {formatInvoiceAmount(target.grossAmount, target.currency)}</option>)}</select>
-            {!visible.length && <p className="invoice-muted">Brak pasujących faktur w walucie przelewu albo wszystkie zostały już wybrane.</p>}
+                {target.name} · {target.number} · brutto {formatInvoiceAmount(target.grossAmount, target.currency)}
+                {invoiceRemainingToPay(target) != null && ` · pozostało ${formatInvoiceAmount(centsToAmount(invoiceRemainingToPay(target)), target.currency)}`}</option>)}</select>
+            {!visible.length && <p className="invoice-muted">{onlyUnsettled
+                ? 'Brak nierozliczonych faktur pasujących do filtrów albo wszystkie zostały już wybrane.'
+                : 'Brak pasujących faktur w walucie przelewu albo wszystkie zostały już wybrane.'}</p>}
         </>}
     </fieldset>;
 }

@@ -1,6 +1,7 @@
 package pl.company.settlements.invoice.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
@@ -36,6 +37,7 @@ public interface MainContractorInvoiceRepository
             Long id
     );
 
+    @EntityGraph(attributePaths = "paymentAllocations")
     List<MainContractorInvoice>
     findAllByMainContract_IdOrderByIssueDateDescIdDesc(
             Long mainContractId

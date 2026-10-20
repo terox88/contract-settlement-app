@@ -2,7 +2,7 @@
 .ksef-import legend { font-weight: 600; color: #1e3a5f; }
 .ksef-import > p, .ksef-preview > p { line-height: 1.5; }
 .ksef-import > label { display: block; margin-bottom: 6px; }
-.ksef-import input[type=file] { max-width: 100%; margin: 0 12px 12px 0; }
+.ksef-import > .file-drop-zone { margin-bottom: 14px; }
 .ksef-preview { border-top: 1px solid #dbe5f0; margin-top: 16px; padding-top: 12px; }
 .ksef-preview h2 { font-size: 1.05rem; overflow-wrap: anywhere; }
 .ksef-preview dl { display: grid; grid-template-columns: minmax(100px, 145px) minmax(0, 1fr); gap: 6px 12px; }

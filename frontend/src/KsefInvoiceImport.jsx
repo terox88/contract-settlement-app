@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import http from './api/http';
+import FileDropZone from './FileDropZone';
 import { buildKsefPreviewRequest, ksefSellerWarning, readKsefPreview } from './utils/ksefImport';
 import { formatInvoiceAmount } from './utils/subcontractorInvoiceForm';
 import './KsefInvoiceImport.css';
@@ -41,9 +42,9 @@ export default function KsefInvoiceImport({ expectedTaxId, disabled = false, onA
     return <fieldset className="ksef-import" disabled={disabled || busy}>
         <legend>Uzupełnij z XML KSeF</legend>
         <p>Wybierz oryginalny XML FA(2) lub FA(3), do 5 MB. Najpierw zobaczysz podgląd, a potem zdecydujesz o uzupełnieniu formularza.</p>
-        <label htmlFor={id}>Plik XML faktury</label>
-        <input id={id} type="file" accept=".xml,application/xml,text/xml" onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null); setPreview(null); setError('');
+        <FileDropZone id={id} label="Plik XML faktury" file={file} disabled={disabled || busy}
+            accept=".xml,application/xml,text/xml" onChange={(selectedFile) => {
+            setFile(selectedFile); setPreview(null); setError('');
         }} />
         <button type="button" className="main-form-button" onClick={load}>{busy ? 'Odczytywanie XML...' : 'Odczytaj XML'}</button>
         {busy && <p role="status">Trwa odczytywanie faktury.</p>}

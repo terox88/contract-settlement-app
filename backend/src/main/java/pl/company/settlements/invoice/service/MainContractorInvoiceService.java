@@ -324,6 +324,8 @@ public class MainContractorInvoiceService {
     ) {
         MainContract mainContract =
                 invoice.getMainContract();
+        BigDecimal paidAmount = invoice.getPaidAmount();
+        BigDecimal remainingAmount = invoice.getGrossAmount().subtract(paidAmount);
 
         return MainContractorInvoiceResponse.builder()
                 .id(
@@ -382,6 +384,9 @@ public class MainContractorInvoiceService {
                 .grossAmount(
                         invoice.getGrossAmount()
                 )
+                .paidAmount(paidAmount)
+                .remainingAmount(remainingAmount)
+                .settled(remainingAmount.signum() <= 0)
 
                 .vatRates(
                         invoice.getVatRates()

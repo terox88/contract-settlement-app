@@ -33,6 +33,10 @@ public class MainContractorInvoiceResponse {
     private BigDecimal vatAmount;
     private BigDecimal grossAmount;
 
+    private BigDecimal paidAmount;
+    private BigDecimal remainingAmount;
+    private boolean settled;
+
     private List<String> vatRates;
 
     private String currency;
