@@ -1,6 +1,28 @@
 import { parseBudgetAmount, formatBudgetCents } from './budgetForm.js';
 import { parseAmendmentAmount } from './contractAmendmentForm.js';
 
+export function financialLimitSigningYear(contract) {
+    const text = contract?.contractDate;
+    if (typeof text !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(text) || text.startsWith('0000')) return null;
+    const date = new Date(`${text}T00:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === text ? Number(text.slice(0, 4)) : null;
+}
+
+export function nextFinancialLimitYear(contract, rows, budget) {
+    const signingYear = financialLimitSigningYear(contract);
+    if (signingYear === null || signingYear > 2200) return null;
+    const minimum = Math.max(2000, signingYear);
+    const used = new Set(rows.map(row => Number(row.year)).filter(Number.isInteger));
+    const available = (budget?.years ?? []).map(row => Number(row.year))
+        .filter(year => Number.isInteger(year) && year >= minimum && year <= 2200 && !used.has(year))
+        .sort((a, b) => a - b)[0];
+    if (available !== undefined) return available;
+    const next = Math.max(minimum, ...[...used].filter(year => year >= minimum && year <= 2200).map(year => year + 1));
+    if (next <= 2200) return next;
+    for (let year = minimum; year <= 2200; year++) if (!used.has(year)) return year;
+    return null;
+}
+
 export function hasFinancialLimitPlan(limit) {
     return Array.isArray(limit?.years) && limit.years.length > 0;
 }
@@ -47,6 +69,8 @@ export function validateFinancialLimitPlan(contract, limit, budget, rows, { newC
     if (!current) return fail('Nie można odczytać aktualnej wartości umowy.');
     if (!rows.length) return fail('Dodaj co najmniej jeden rok limitu.');
     const proposed = new Map();
+    const signingYear = financialLimitSigningYear(contract);
+    if (signingYear === null) return fail('Uzupełnij prawidłową datę zawarcia umowy przed ustaleniem limitów.');
     let total = 0n;
     for (const row of rows) {
         const year = Number(row.year);
@@ -57,6 +81,11 @@ export function validateFinancialLimitPlan(contract, limit, budget, rows, { newC
         const amount = parseBudgetAmount(row.amount);
         if (!amount) return fail(`Podaj poprawną, nieujemną kwotę dla roku ${year} (maksymalnie 2 miejsca po przecinku).`);
         if (amount.cents > 999999999999999n) return fail(`Kwota dla roku ${year} przekracza dopuszczalny zakres.`);
+        const clearsExistingYear = !newContract && amount.cents === 0n
+            && hasFinancialLimitPlan(limit) && limit.years.some(saved => Number(saved.year) === year);
+        if (year < signingYear && !clearsExistingYear) {
+            return fail(`Limit na rok ${year} nie może być wcześniejszy niż rok zawarcia umowy (${signingYear}).`);
+        }
         proposed.set(year, amount.cents); total += amount.cents;
         result.years.push({ year, amount: amount.amount });
     }

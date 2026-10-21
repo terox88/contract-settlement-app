@@ -49,7 +49,7 @@ class FinancialLimitServiceTest {
     @InjectMocks private FinancialLimitService service;
 
     private void setupCommon(FinancialLimit existing) {
-        when(mainContractRepository.findById(38L)).thenReturn(Optional.of(contract));
+        when(mainContractRepository.findByIdForUpdate(38L)).thenReturn(Optional.of(contract));
         when(contract.getId()).thenReturn(38L);
         when(contract.getInvestmentTask()).thenReturn(task);
         when(task.getId()).thenReturn(36L);
@@ -85,11 +85,11 @@ class FinancialLimitServiceTest {
     @Test
     void createsPlanAndReleasesImplicitCommitmentFromContractYear() {
         setupCommon(null);
-        BudgetYear budgetYear2026 = budgetYear(2026, "500000.00");
-        BudgetYear budgetYear2027 = budgetYear(2027, "400000.00");
-        when(budget.getYears()).thenReturn(
-                List.of(budgetYear2026, budgetYear2027)
+        List<BudgetYear> budgetYears = List.of(
+                budgetYear(2026, "500000.00"),
+                budgetYear(2027, "400000.00")
         );
+        when(budget.getYears()).thenReturn(budgetYears);
         FinancialLimit created = new FinancialLimit(contract);
         when(contract.getOrCreateFinancialLimit()).thenReturn(created);
         when(financialLimitRepository.saveAndFlush(any(FinancialLimit.class)))
@@ -110,11 +110,11 @@ class FinancialLimitServiceTest {
     @Test
     void refusesPlanThatExceedsAnnualBudget() {
         setupCommon(null);
-        BudgetYear budgetYear2026 = budgetYear(2026, "500000.00");
-        BudgetYear budgetYear2027 = budgetYear(2027, "100000.00");
-        when(budget.getYears()).thenReturn(
-                List.of(budgetYear2026, budgetYear2027)
+        List<BudgetYear> budgetYears = List.of(
+                budgetYear(2026, "500000.00"),
+                budgetYear(2027, "100000.00")
         );
+        when(budget.getYears()).thenReturn(budgetYears);
 
         assertThrows(ConflictException.class, () -> service.replacePlan(38L,
                 plan(year(2026, "400000.00"), year(2027, "200000.00"))));
@@ -127,11 +127,11 @@ class FinancialLimitServiceTest {
         existing.addYear(2026, new BigDecimal("300000.00"));
         existing.addYear(2027, new BigDecimal("300000.00"));
         setupCommon(existing);
-        BudgetYear budgetYear2026 = budgetYear(2026, "600000.00");
-        BudgetYear budgetYear2027 = budgetYear(2027, "600000.00");
-        when(budget.getYears()).thenReturn(
-                List.of(budgetYear2026, budgetYear2027)
+        List<BudgetYear> budgetYears = List.of(
+                budgetYear(2026, "600000.00"),
+                budgetYear(2027, "600000.00")
         );
+        when(budget.getYears()).thenReturn(budgetYears);
         MainContractPaymentByDate payment = mock(MainContractPaymentByDate.class);
         when(payment.getCurrency()).thenReturn("PLN");
         when(payment.getPaymentDate()).thenReturn(LocalDate.of(2026, 8, 20));
@@ -164,11 +164,11 @@ class FinancialLimitServiceTest {
         when(budgetCommitmentService.calculateByYear(36L))
                 .thenReturn(Map.of(2026, new BigDecimal("300000.00"),
                         2027, new BigDecimal("300000.00")));
-        BudgetYear budgetYear2026 = budgetYear(2026, "500000.00");
-        BudgetYear budgetYear2027 = budgetYear(2027, "500000.00");
-        when(budget.getYears()).thenReturn(
-                List.of(budgetYear2026, budgetYear2027)
+        List<BudgetYear> budgetYears = List.of(
+                budgetYear(2026, "500000.00"),
+                budgetYear(2027, "500000.00")
         );
+        when(budget.getYears()).thenReturn(budgetYears);
         when(financialLimitRepository.saveAndFlush(any(FinancialLimit.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 

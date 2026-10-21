@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import http from './api/http';
 import { parseBudgetAmount, formatBudgetCents, isMissingBudget } from './utils/budgetForm';
-import { buildFinancialLimitRequest, hasFinancialLimitPlan, validateFinancialLimitPlan } from './utils/financialLimitForm';
+import { buildFinancialLimitRequest, financialLimitSigningYear, hasFinancialLimitPlan, nextFinancialLimitYear, validateFinancialLimitPlan } from './utils/financialLimitForm';
 import './FinancialLimitsCard.css';
 
 function cents(value) { return parseBudgetAmount(value)?.cents ?? null; }
@@ -36,11 +36,11 @@ function errorMessage(error) {
 }
 
 let nextRowKey = 0;
-function createRow() {
+function createRow(year) {
   nextRowKey += 1;
   return {
     key: `new-${nextRowKey}`,
-    year: String(new Date().getFullYear() + 1),
+    year: String(year),
     amount: '0.00',
     original: false,
   };
@@ -65,6 +65,8 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
   const contractId = contract?.id;
   const investmentTaskId = contract?.investmentTaskId;
   const contractYear = Number(contract?.contractDate?.slice(0, 4));
+  const minimumYear = Math.max(2000, financialLimitSigningYear(contract) ?? 2000);
+  const nextYear = nextFinancialLimitYear(contract, rows, budget);
   const currentValueCents = cents(contract?.currentValue);
 
   useEffect(() => {
@@ -233,6 +235,7 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
               <p className="finlim__hint">
                 Suma limitów powinna odpowiadać aktualnej wartości umowy. Aby wycofać istniejący rok, ustaw jego kwotę na 0 zł.
               </p>
+              <p className="finlim__hint">Limity można ustalić od roku zawarcia umowy ({contractYear}). Jeżeli wcześniej zapisano limit na starszy rok, wyzeruj go i przenieś kwotę na właściwe lata.</p>
               {validation.uncheckedYears.length > 0 && !validation.error && <p className="finlim__hint">
                 Dostępność środków w latach {validation.uncheckedYears.join(', ')} zostanie sprawdzona przy zapisie.
               </p>}
@@ -243,7 +246,7 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
                       <span>Rok</span>
                       <input
                         type="number"
-                        min="2000"
+                        min={minimumYear}
                         max="2200"
                         step="1"
                         value={row.year}
@@ -282,7 +285,7 @@ export default function FinancialLimitsCard({ contract, onChanged }) {
                 <button type="button" className="finlim__button" onClick={() => { setEditing(false); setError(''); }} disabled={saving}>
                   Anuluj
                 </button>
-                <button type="button" className="finlim__button" onClick={() => setRows((prev) => [...prev, createRow()])} disabled={saving}>
+                <button type="button" className="finlim__button" onClick={() => { if (nextYear !== null) setRows((prev) => [...prev, createRow(nextYear)]); }} disabled={saving || nextYear === null}>
                   + Dodaj rok
                 </button>
                 <button type="submit" className="finlim__button finlim__button--primary" disabled={saving || !budget}>

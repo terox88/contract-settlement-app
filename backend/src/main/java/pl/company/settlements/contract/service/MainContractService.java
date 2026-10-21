@@ -167,6 +167,7 @@ public class MainContractService {
         MainContractAdministration administration = MainContractAdministrationRules.validatedValue(request.getAdministration());
         MainContractAdministrationRules.validateCompletionDate(request.getContractDate(),
                 administration == null ? null : administration.getActualCompletionDate());
+        FinancialLimitYearRules.validateInitialYears(request.getContractDate(), request.getFinancialLimitYears());
         InvestmentTask investmentTask = investmentTaskRepository
                 .findById(request.getInvestmentTaskId())
                 .orElseThrow(() -> new IllegalArgumentException(
@@ -236,6 +237,10 @@ public class MainContractService {
         MainContractAdministrationRules.preserveReturns(contract.getAdministration(), administration);
         MainContractAdministrationRules.validateCompletionDate(request.getContractDate(),
                 effectiveAdministration == null ? null : effectiveAdministration.getActualCompletionDate());
+        if (contract.getFinancialLimit() != null) {
+            contract.getFinancialLimit().getYears().stream().filter(year -> year.getAmount().signum() > 0)
+                    .forEach(year -> FinancialLimitYearRules.validateYear(request.getContractDate(), year.getYear()));
+        }
         hierarchyValidationService.validateMainContractUpdate(contract, request);
 
         applyContractData(

@@ -148,7 +148,7 @@ function MainContractForm({ taskId, contractId }) {
     function changeContract(field, value) {
         setContract((current) => ({ ...current, [field]: value }));
         setErrors((current) => ({ ...current, [field]: '',
-            ...(field === 'contractDate' ? { 'administration.actualCompletionDate': '' } : {}) }));
+            ...(field === 'contractDate' ? { 'administration.actualCompletionDate': '', financialLimitYears: '' } : {}) }));
         setSaveError('');
     }
 

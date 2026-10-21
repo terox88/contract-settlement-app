@@ -138,7 +138,7 @@ public class FinancialLimitService {
     }
 
     /**
-     * All write operations use one budget-row lock, validate the complete
+     * All write operations lock the contract and then its budget, validate the complete
      * resulting plan, and then perform one JPA persistence operation.
      */
     private FinancialLimitResponse modifyPlan(
@@ -153,7 +153,7 @@ public class FinancialLimitService {
             Function<FinancialLimit, Map<Integer, BigDecimal>> change,
             boolean initialPlan
     ) {
-        MainContract contract = mainContractRepository.findById(mainContractId)
+        MainContract contract = mainContractRepository.findByIdForUpdate(mainContractId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Main contract " + mainContractId + " does not exist"
                 ));
@@ -232,6 +232,11 @@ public class FinancialLimitService {
             if (amount == null || amount.signum() < 0) {
                 throw new IllegalArgumentException("Financial limit for " + year + " must be nonnegative");
             }
+            // An existing erroneous historical row may only be cleared, never
+            // used as financing for this contract. New historical rows are rejected.
+            boolean clearsExistingYear = !initialPlan && existing != null && amount.signum() == 0
+                    && existing.getYears().stream().anyMatch(row -> row.getYear() == year);
+            if (!clearsExistingYear) FinancialLimitYearRules.validateYear(contract.getContractDate(), year);
             try {
                 BigDecimal normalized = amount.setScale(2, RoundingMode.UNNECESSARY);
                 if (normalized.precision() > 15) {

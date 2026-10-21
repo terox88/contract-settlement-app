@@ -53,7 +53,7 @@ class FinancialLimitInitialPlanServiceTest {
         contract.setContractNumber("UM/2026/01");
         contract.setContractDate(LocalDate.of(2026, 10, 14));
         contract.setInitialValue(new BigDecimal("100.00"));
-        when(mainContractRepository.findById(10L)).thenReturn(Optional.of(contract));
+        when(mainContractRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(contract));
         when(financialLimitRepository.findByMainContract_Id(10L)).thenReturn(Optional.empty());
         Budget budget = mock(Budget.class);
         // Najpierw zakończ konfigurację mocków lat, dopiero potem rozpocznij stubbing budżetu.

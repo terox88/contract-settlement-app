@@ -77,3 +77,20 @@ test('Plan jest wysyłany jednym PUT z dokładnymi kwotami dziesiętnymi', () =>
         years: [{ year: 2026, amount: '0.10' }, { year: 2027, amount: '0.20' }],
     } });
 });
+
+test('Edycja limitów również blokuje finansowanie sprzed roku zawarcia umowy', () => {
+    const history = { years: [{ year: 2025, amount: '1000', availableAmount: '1000' }, ...budget.years] };
+    const rows = [{ year: '2025', amount: '100' }];
+    assert.match(validateFinancialLimitPlan(contract, null, history, rows).error, /2025.*rok zawarcia.*2026/);
+    assert.throws(() => buildFinancialLimitRequest(contract, null, history, rows), /2025.*2026/);
+    assert.match(validateFinancialLimitPlan(contract, { years: [{ year: 2025, amount: '100' }] }, history, rows).error, /2025.*2026/);
+});
+
+test('Błędny historyczny limit można wyzerować lub usunąć; nie można dodawać nowego historycznego roku', () => {
+    const original = { years: [{ year: 2025, amount: '100' }] };
+    const annual = { years: [{ year: 2026, amount: '100', availableAmount: '100' }] };
+    const corrected = [{ year: '2025', amount: '0' }, { year: '2026', amount: '100' }];
+    assert.equal(validateFinancialLimitPlan(contract, original, annual, corrected).error, null);
+    assert.equal(validateFinancialLimitPlan(contract, original, annual, corrected.slice(1)).error, null);
+    assert.match(validateFinancialLimitPlan(contract, null, annual, corrected).error, /2025.*2026/);
+});

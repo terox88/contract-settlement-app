@@ -14,6 +14,7 @@ import pl.company.settlements.contract.model.SecurityReturnRequest;
 import pl.company.settlements.contract.model.MainContractAdministrationRequest;
 import pl.company.settlements.contract.model.MainContractUpdateRequest;
 import pl.company.settlements.contract.model.MainContractCreateRequest;
+import pl.company.settlements.contract.model.FinancialLimitYearRequest;
 import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.repository.ContractorRepository;
@@ -26,6 +27,7 @@ import pl.company.settlements.task.repository.InvestmentTaskRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -123,6 +125,28 @@ class MainContractAdministrationServiceTest {
 
     private void lockExisting() {
         when(repository.findByIdForUpdate(7L)).thenReturn(Optional.of(contract));
+    }
+
+    @Test
+    void rejectsHistoricalInitialLimitBeforeSavingContractOrCreatingContractor() {
+        MainContractCreateRequest request = new MainContractCreateRequest();
+        request.setContractDate(LocalDate.parse("2026-10-10"));
+        FinancialLimitYearRequest year = new FinancialLimitYearRequest();
+        year.setYear(2025); year.setAmount(new BigDecimal("1000"));
+        request.setFinancialLimitYears(List.of(year));
+        var error = assertThrows(IllegalArgumentException.class, () -> service.create(request));
+        assertTrue(error.getMessage().contains("2025"));
+        verifyNoInteractions(repository, tasks, contractors, contractorService, limits);
+    }
+
+    @Test
+    void changingSigningYearCannotLeavePositiveLimitsBeforeTheContract() {
+        lockExisting();
+        contract.getOrCreateFinancialLimit().addYear(2026, new BigDecimal("1000"));
+        MainContractUpdateRequest request = update(); request.setContractDate(LocalDate.parse("2027-01-01"));
+        assertThrows(IllegalArgumentException.class, () -> service.update(7L, request));
+        assertEquals("OLD", contract.getContractNumber());
+        verifyNoInteractions(hierarchy, invoices, payments);
     }
 
     @Test
