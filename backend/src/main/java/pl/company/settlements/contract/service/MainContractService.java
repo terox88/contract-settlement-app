@@ -13,6 +13,8 @@ import pl.company.settlements.contract.model.MainContractCreateRequest;
 import pl.company.settlements.contract.model.MainContractFilter;
 import pl.company.settlements.contract.model.MainContractResponse;
 import pl.company.settlements.contract.model.MainContractUpdateRequest;
+import pl.company.settlements.contract.model.MainContractAdministrationResponse;
+import pl.company.settlements.contract.model.SecurityReturnRequest;
 import pl.company.settlements.contract.model.FinancialLimitPlanRequest;
 import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contract.repository.specification.MainContractSpecification;
@@ -231,6 +233,7 @@ public class MainContractService {
         MainContractAdministration administration = MainContractAdministrationRules.validatedValue(request.getAdministration());
         MainContractAdministration effectiveAdministration = request.getAdministration() == null
                 ? contract.getAdministration() : administration;
+        MainContractAdministrationRules.preserveReturns(contract.getAdministration(), administration);
         MainContractAdministrationRules.validateCompletionDate(request.getContractDate(),
                 effectiveAdministration == null ? null : effectiveAdministration.getActualCompletionDate());
         hierarchyValidationService.validateMainContractUpdate(contract, request);
@@ -265,6 +268,15 @@ public class MainContractService {
                 invoicedAmount,
                 paidAmount
         );
+    }
+
+    @Transactional
+    public MainContractAdministrationResponse updateSecurityReturn(Long id, SecurityReturnRequest request) {
+        if (request == null) throw new IllegalArgumentException("Podaj dane zwrotu zabezpieczenia.");
+        MainContract contract = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("Main contract with id " + id + " does not exist"));
+        MainContractAdministrationRules.setReturned(contract.getAdministration(), request.stage(), request.returned());
+        return MainContractAdministrationRules.toResponse(contract.getAdministration());
     }
 
     private MainContract findEntityById(Long id) {

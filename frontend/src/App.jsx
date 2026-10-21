@@ -1,48 +1,33 @@
-import {
-    Navigate,
-    Route,
-    Routes,
-} from 'react-router-dom';
-
-import InvestmentTaskListPage
-    from './pages/InvestmentTaskListPage';
-
-import InvestmentTaskDetailsPage
-    from './pages/InvestmentTaskDetailsPage';
-
-import InvestmentTaskFormPage
-    from './pages/InvestmentTaskFormPage';
-
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import InvestmentTaskListPage from './pages/InvestmentTaskListPage';
+import ViewErrorBoundary from './ViewErrorBoundary';
 import './pages/InvestmentTaskFormPage.css';
+import './pages/MainContractFormPage.css';
 
-import MainContractDetailsPage
-    from './pages/MainContractDetailsPage';
-
-import MainContractFormPage
-    from './pages/MainContractFormPage';
-
-import ContractAmendmentFormPage
-    from './pages/ContractAmendmentFormPage';
-
-import SubcontractFormPage
-    from './pages/SubcontractFormPage';
-
-import SubcontractDetailsPage from './pages/SubcontractDetailsPage';
-import ContractAttachmentsPage from './pages/ContractAttachmentsPage';
-import PaymentsPage from './pages/PaymentsPage';
-import PaymentFormPage from './pages/PaymentFormPage';
-import PaymentDetailsPage from './pages/PaymentDetailsPage';
-import InvoicePaymentsPage from './pages/InvoicePaymentsPage';
-
-import MainContractorInvoicesPage from './pages/MainContractorInvoicesPage';
-import MainContractorInvoiceFormPage from './pages/MainContractorInvoiceFormPage';
-import MainInvoiceSettlementPage from './pages/MainInvoiceSettlementPage';
-
-import SubcontractorInvoicesPage from './pages/SubcontractorInvoicesPage';
-import SubcontractorInvoiceFormPage from './pages/SubcontractorInvoiceFormPage';
+const InvestmentTaskDetailsPage = lazy(() => import('./pages/InvestmentTaskDetailsPage'));
+const InvestmentTaskFormPage = lazy(() => import('./pages/InvestmentTaskFormPage'));
+const MainContractDetailsPage = lazy(() => import('./pages/MainContractDetailsPage'));
+const MainContractFormPage = lazy(() => import('./pages/MainContractFormPage'));
+const ContractAmendmentFormPage = lazy(() => import('./pages/ContractAmendmentFormPage'));
+const SubcontractFormPage = lazy(() => import('./pages/SubcontractFormPage'));
+const SubcontractDetailsPage = lazy(() => import('./pages/SubcontractDetailsPage'));
+const ContractAttachmentsPage = lazy(() => import('./pages/ContractAttachmentsPage'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+const PaymentFormPage = lazy(() => import('./pages/PaymentFormPage'));
+const PaymentDetailsPage = lazy(() => import('./pages/PaymentDetailsPage'));
+const InvoicePaymentsPage = lazy(() => import('./pages/InvoicePaymentsPage'));
+const MainContractorInvoicesPage = lazy(() => import('./pages/MainContractorInvoicesPage'));
+const MainContractorInvoiceFormPage = lazy(() => import('./pages/MainContractorInvoiceFormPage'));
+const MainInvoiceSettlementPage = lazy(() => import('./pages/MainInvoiceSettlementPage'));
+const SubcontractorInvoicesPage = lazy(() => import('./pages/SubcontractorInvoicesPage'));
+const SubcontractorInvoiceFormPage = lazy(() => import('./pages/SubcontractorInvoiceFormPage'));
 
 export default function App() {
+    const location = useLocation();
     return (
+        <ViewErrorBoundary key={location.pathname}>
+            <Suspense fallback={<div className="loading-message" role="status">Ładowanie widoku…</div>}>
         <Routes>
             <Route path="/main-contracts/:contractId/attachments" element={<ContractAttachmentsPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId" element={<SubcontractDetailsPage />} />
@@ -164,5 +149,7 @@ export default function App() {
             />
 
         </Routes>
+            </Suspense>
+        </ViewErrorBoundary>
     );
 }

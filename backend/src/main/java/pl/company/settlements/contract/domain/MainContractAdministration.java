@@ -44,4 +44,10 @@ public class MainContractAdministration {
 
     @Column(name = "retention_security_valid_until")
     private LocalDate retentionSecurityValidUntil;
+
+    @Column(name = "security_returned")
+    private Boolean securityReturned = false;
+
+    @Column(name = "retention_security_returned")
+    private Boolean retentionSecurityReturned = false;
 }

@@ -3,6 +3,7 @@ package pl.company.settlements.contract.service;
 import pl.company.settlements.contract.domain.MainContractAdministration;
 import pl.company.settlements.contract.domain.PerformanceSecurityType;
 import pl.company.settlements.contract.domain.SecurityValidityMode;
+import pl.company.settlements.contract.domain.SecurityReturnStage;
 import pl.company.settlements.contract.model.MainContractAdministrationRequest;
 import pl.company.settlements.contract.model.MainContractAdministrationResponse;
 
@@ -28,13 +29,21 @@ public final class MainContractAdministrationRules {
         validateAmount(request.securityAmount());
         validateAmount(request.retentionSecurityAmount());
         boolean document = request.securityType() != null && request.securityType().isDocument();
-        if (!document && (request.securityValidityMode() != null || request.securityValidUntil() != null
-                || request.retentionSecurityValidUntil() != null || request.retentionSecurityAmount() != null)) {
-            throw new IllegalArgumentException("Terminy ważności i drugi etap dotyczą zabezpieczenia w formie dokumentu.");
+        boolean established = request.securityType() != null && request.securityType() != PerformanceSecurityType.NOT_ESTABLISHED;
+        if (!established && (request.securityAmount() != null || request.securityValidityMode() != null
+                || request.securityValidUntil() != null || request.retentionSecurityAmount() != null
+                || request.retentionSecurityValidUntil() != null)) {
+            throw new IllegalArgumentException("Dane zabezpieczenia wymagają wskazania jego ustanowionej formy.");
         }
-        if ((request.securityType() == null || request.securityType() == PerformanceSecurityType.NOT_ESTABLISHED)
-                && request.securityAmount() != null) {
-            throw new IllegalArgumentException("Kwota wymaga wskazania ustanowionego zabezpieczenia.");
+        if (!document && (request.securityValidUntil() != null || request.retentionSecurityValidUntil() != null)) {
+            throw new IllegalArgumentException("Terminy ważności dotyczą zabezpieczenia w formie dokumentu.");
+        }
+        if (request.securityValidityMode() != SecurityValidityMode.TWO_STAGE && request.retentionSecurityAmount() != null) {
+            throw new IllegalArgumentException("Zredukowana kwota wymaga wariantu dwóch etapów.");
+        }
+        if (request.securityAmount() != null && request.retentionSecurityAmount() != null
+                && request.retentionSecurityAmount().compareTo(request.securityAmount()) > 0) {
+            throw new IllegalArgumentException("Zredukowana kwota nie może przekraczać pełnej kwoty zabezpieczenia.");
         }
         if (document) {
             if (request.securityValidityMode() == null || request.securityValidUntil() == null) {
@@ -86,6 +95,32 @@ public final class MainContractAdministrationRules {
         }
     }
 
+    public static void preserveReturns(MainContractAdministration previous, MainContractAdministration replacement) {
+        if (previous == null || replacement == null) return;
+        boolean returned = Boolean.TRUE.equals(previous.getSecurityReturned());
+        boolean retentionReturned = Boolean.TRUE.equals(previous.getRetentionSecurityReturned());
+        if ((returned || retentionReturned) && (previous.getSecurityType() != replacement.getSecurityType()
+                || (previous.getSecurityValidityMode() == SecurityValidityMode.TWO_STAGE)
+                != (replacement.getSecurityValidityMode() == SecurityValidityMode.TWO_STAGE))) {
+            throw new IllegalArgumentException("Przed zmianą formy lub liczby etapów zabezpieczenia cofnij oznaczenie jego zwrotu w szczegółach umowy.");
+        }
+        replacement.setSecurityReturned(returned);
+        replacement.setRetentionSecurityReturned(retentionReturned);
+    }
+
+    public static void setReturned(MainContractAdministration value, SecurityReturnStage stage, Boolean returned) {
+        if (stage == null || returned == null) throw new IllegalArgumentException("Podaj etap i stan zwrotu zabezpieczenia.");
+        if (value == null || value.getSecurityType() == null || value.getSecurityType() == PerformanceSecurityType.NOT_ESTABLISHED) {
+            throw new IllegalArgumentException("Najpierw uzupełnij ustanowione zabezpieczenie umowy.");
+        }
+        if (stage == SecurityReturnStage.RETENTION) {
+            if (value.getSecurityValidityMode() != SecurityValidityMode.TWO_STAGE) {
+                throw new IllegalArgumentException("Zwrot części na gwarancję i rękojmię wymaga wariantu dwóch etapów.");
+            }
+            value.setRetentionSecurityReturned(returned);
+        } else value.setSecurityReturned(returned);
+    }
+
     private static void validateAmount(BigDecimal amount) {
         if (amount != null && (amount.signum() <= 0 || amount.stripTrailingZeros().scale() > 2
                 || amount.compareTo(new BigDecimal("9999999999999.99")) > 0)) {
@@ -108,6 +143,8 @@ public final class MainContractAdministrationRules {
                 value.getRetentionSecurityValidUntil(),
                 warrantyEndDate(value.getActualCompletionDate(), value.getWarrantyMonths()),
                 value.getSecurityType() == null ? null : value.getSecurityType().getLabel(),
-                value.getSecurityValidityMode() == null ? null : value.getSecurityValidityMode().getLabel());
+                value.getSecurityValidityMode() == null ? null : value.getSecurityValidityMode().getLabel(),
+                Boolean.TRUE.equals(value.getSecurityReturned()),
+                Boolean.TRUE.equals(value.getRetentionSecurityReturned()));
     }
 }

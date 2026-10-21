@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import http from '../api/http';
 import './InvestmentTaskFilters.css';
+import '../TaskOverview.css';
+import { filterTasks, taskStatusCounts } from '../utils/taskOverview';
 
 const FILTERS = [
     {
@@ -49,6 +51,9 @@ export default function InvestmentTaskListPage() {
     const [implementerDraft, setImplementerDraft] = useState('');
     const [implementerFilter, setImplementerFilter] = useState('');
     const [attempt, setAttempt] = useState(0);
+    const [query, setQuery] = useState('');
+    const visibleTasks = useMemo(() => filterTasks(tasks, query), [tasks, query]);
+    const counts = useMemo(() => taskStatusCounts(visibleTasks), [visibleTasks]);
 
     useEffect(() => {
         let active = true;
@@ -120,6 +125,18 @@ export default function InvestmentTaskListPage() {
                 ))}
             </div>
 
+            <div className="task-quick-search">
+                <label htmlFor="task-quick-search">Szukaj w wynikach
+                    <input id="task-quick-search" type="search" value={query} maxLength={255}
+                        placeholder="Numer, nazwa, realizator lub opis zadania" onChange={event => setQuery(event.target.value)} />
+                </label>
+                {query && <button type="button" className="task-form-button" onClick={() => setQuery('')}>Wyczyść wyszukiwanie</button>}
+            </div>
+            {!loading && !error && <div className="task-list-overview" role="status" aria-label="Liczba zadań po zastosowaniu filtrów">
+                <span>Wynik filtrów: <strong>{counts.total}</strong></span>
+                {FILTERS.filter(filter => filter.value !== 'ALL').map(filter => <span key={filter.value}>{filter.label}: <strong>{counts[filter.value]}</strong></span>)}
+            </div>}
+
             {error && (
                 <div className="error-message">
                     {error}
@@ -138,7 +155,7 @@ export default function InvestmentTaskListPage() {
                 <div className="loading-message">
                     Ładowanie zadań...
                 </div>
-            ) : !error && tasks.length === 0 ? (
+            ) : !error && visibleTasks.length === 0 ? (
                 <section className="card empty-state">
                     <h2>Brak zadań</h2>
 
@@ -151,7 +168,7 @@ export default function InvestmentTaskListPage() {
             ) : !error ? (
                 <div className="task-grid">
 
-                    {tasks.map((task) => (
+                    {visibleTasks.map((task) => (
                         <Link
                             key={task.id}
                             to={`/tasks/${task.id}`}

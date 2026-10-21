@@ -10,6 +10,7 @@ import {
 
 import http from '../api/http';
 import BudgetSection from '../BudgetSection';
+import TaskOverview from '../TaskOverview';
 import { formatContractType } from '../utils/contractTypes';
 
 const currencyFormatter =
@@ -49,72 +50,33 @@ export default function InvestmentTaskDetailsPage() {
     const [error, setError] =
         useState(null);
 
+    const [attempt, setAttempt] = useState(0);
     useEffect(() => {
-        loadData();
-    }, [taskId]);
-
-    async function loadData() {
-        try {
-            setLoading(true);
-            setError(null);
-
-            /*
-             * Zadanie oraz umowy pobieramy równolegle.
-             */
-            const [
-                taskResponse,
-                contractsResponse,
-            ] = await Promise.all([
-                http.get(
-                    `/investment-tasks/${taskId}`
-                ),
-
-                http.get(
-                    '/main-contracts',
-                    {
-                        params: {
-                            investmentTaskId:
-                            taskId,
-                        },
-                    }
-                ),
-            ]);
-
-            setTask(
-                taskResponse.data
-            );
-
-            /*
-             * Dodatkowo filtrujemy po stronie
-             * frontendu.
-             *
-             * Dzięki temu nawet gdyby backend
-             * zignorował parametr filtra,
-             * nie pokażemy umów z innego zadania.
-             */
-            const taskContracts =
-                contractsResponse.data.filter(
-                    (contract) =>
-                        String(
-                            contract.investmentTaskId
-                        ) === String(taskId)
-                );
-
-            setContracts(
-                taskContracts
-            );
-
-        } catch (error) {
-
-            setError(
-                error.message
-            );
-
-        } finally {
-
-            setLoading(false);
+        let active = true;
+        const controller = new AbortController();
+        async function loadData() {
+            setLoading(true); setError(null);
+            try {
+                const [taskResponse, contractsResponse] = await Promise.all([
+                    http.get(`/investment-tasks/${taskId}`, { signal: controller.signal }),
+                    http.get('/main-contracts', { params: { investmentTaskId: taskId }, signal: controller.signal }),
+                ]);
+                if (String(taskResponse.data?.id) !== String(taskId) || !Array.isArray(contractsResponse.data)) {
+                    throw new Error('Nie można odczytać danych zadania.');
+                }
+                if (active) {
+                    setTask(taskResponse.data);
+                    setContracts(contractsResponse.data.filter(contract => String(contract.investmentTaskId) === String(taskId)));
+                }
+            } catch (failure) {
+                if (active) setError(failure.message);
+            } finally {
+                if (active) setLoading(false);
+            }
         }
-    }
+        loadData();
+        return () => { active = false; controller.abort(); };
+    }, [taskId, attempt]);
 
     if (loading) {
         return (
@@ -132,7 +94,7 @@ export default function InvestmentTaskDetailsPage() {
                 <button
                     type="button"
                     className="retry-button"
-                    onClick={loadData}
+                    onClick={() => setAttempt(value => value + 1)}
                 >
                     Spróbuj ponownie
                 </button>
@@ -195,6 +157,8 @@ export default function InvestmentTaskDetailsPage() {
                 )}
 
             </section>
+
+            <TaskOverview key={`overview-${taskId}`} contracts={contracts} />
 
             <BudgetSection
                 key={taskId}

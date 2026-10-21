@@ -1,0 +1,26 @@
+.task-overview { margin: 24px 0; }
+.task-overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.task-overview-heading h2, .task-overview-heading h3 { margin: 0; }
+.task-overview-heading span { color: #64748b; font-size: 14px; }
+.task-overview-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.task-overview-metric { padding: 16px; background: #f8fafc; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
+.task-overview-metric span { color: #475569; font-size: 13px; }
+.task-overview-metric strong { font-size: 19px; }
+.task-attention-list { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; }
+.task-attention-list li { padding: 12px 14px; border-left: 4px solid #eab308; background: #fffbeb; border-radius: 5px; }
+.task-attention-list li.task-attention-expired { border-color: #ef4444; background: #fef2f2; }
+.task-attention-list a { color: #1e293b; display: block; line-height: 1.5; text-decoration: underline; text-underline-offset: 3px; }
+.task-attention-list span { display: block; color: #64748b; font-size: 13px; margin-top: 6px; }
+.task-overview-clear { color: #166534; }
+.task-list-overview { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.task-list-overview span { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+.task-quick-search { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 16px 0; }
+.task-quick-search label { display: flex; flex: 1 1 260px; flex-direction: column; gap: 7px; font-size: 14px; }
+.task-quick-search input { padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 7px; font: inherit; }
+.task-card .task-description { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 1000px) { .task-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+    .task-overview-metrics { grid-template-columns: 1fr; }
+    .contracts-heading { flex-direction: column; align-items: stretch; gap: 12px; }
+    .contracts-heading .task-form-actions { justify-content: flex-start; flex-wrap: wrap; }
+}

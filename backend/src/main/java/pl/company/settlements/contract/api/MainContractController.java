@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +17,8 @@ import pl.company.settlements.contract.model.MainContractCreateRequest;
 import pl.company.settlements.contract.model.MainContractFilter;
 import pl.company.settlements.contract.model.MainContractResponse;
 import pl.company.settlements.contract.model.MainContractUpdateRequest;
+import pl.company.settlements.contract.model.MainContractAdministrationResponse;
+import pl.company.settlements.contract.model.SecurityReturnRequest;
 import pl.company.settlements.contract.service.MainContractService;
 
 import java.util.List;
@@ -48,6 +51,14 @@ public class MainContractController {
             @RequestBody MainContractCreateRequest request
     ) {
         return service.create(request);
+    }
+
+    @PatchMapping("/{id}/security-return")
+    public MainContractAdministrationResponse updateSecurityReturn(
+            @PathVariable Long id,
+            @Valid @RequestBody SecurityReturnRequest request
+    ) {
+        return service.updateSecurityReturn(id, request);
     }
 
     @PutMapping("/{id}")

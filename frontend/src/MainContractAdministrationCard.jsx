@@ -1,19 +1,41 @@
-import { useEffect, useState } from 'react';
-import { expiryNotice, formatAdministrationDate, isDocumentSecurity, localToday } from './utils/contractAdministration';
+import { useRef, useState } from 'react';
+import http from './api/http';
+import useCalendarDate from './hooks/useCalendarDate';
+import { expiryNotice, formatAdministrationDate, isDocumentSecurity, securityStages } from './utils/contractAdministration';
+import { formatBudgetCents } from './utils/budgetForm';
 import { formatInvoiceAmount } from './utils/subcontractorInvoiceForm';
 import './MainContractAdministrationCard.css';
 
-export default function MainContractAdministrationCard({ administration }) {
+export default function MainContractAdministrationCard({ administration, contractId, onChange }) {
     const data = administration ?? {};
-    const [today, setToday] = useState(localToday);
-    useEffect(() => {
-        const refresh = () => setToday(localToday());
-        const interval = setInterval(refresh, 60000);
-        window.addEventListener('focus', refresh);
-        document.addEventListener('visibilitychange', refresh);
-        return () => { clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
-    }, []);
+    const today = useCalendarDate();
+    const [saving, setSaving] = useState(null);
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
+    const pending = useRef(false);
+    const stages = securityStages(data);
     const amount = value => value == null ? 'Nie uzupełniono kwoty' : formatInvoiceAmount(value, 'PLN');
+
+    async function markReturn(stage) {
+        if (pending.current || !contractId || !onChange) return;
+        pending.current = true;
+        setSaving(stage.stage); setError(''); setMessage('');
+        try {
+            const { data: saved } = await http.patch(`/main-contracts/${contractId}/security-return`,
+                { stage: stage.stage, returned: !stage.returned });
+            const field = stage.stage === 'PERFORMANCE' ? 'securityReturned' : 'retentionSecurityReturned';
+            if (typeof saved?.[field] !== 'boolean' || saved[field] !== !stage.returned) {
+                throw new Error('Nie można potwierdzić stanu zwrotu. Odśwież widok umowy.');
+            }
+            onChange(saved);
+            setMessage(stage.returned ? 'Cofnięto oznaczenie zwrotu.' : `Zapisano zwrot: ${stage.label.toLocaleLowerCase('pl-PL')}.`);
+        } catch (failure) {
+            setError(failure.message || 'Nie udało się zapisać zwrotu zabezpieczenia.');
+        } finally {
+            pending.current = false; setSaving(null);
+        }
+    }
+
     return <section className="card contract-administration" aria-label="Gwarancja, ubezpieczenia i zabezpieczenie">
         <h2>Zakończenie, gwarancja i zabezpieczenia</h2>
         <div className="contract-administration-grid">
@@ -23,17 +45,26 @@ export default function MainContractAdministrationCard({ administration }) {
             <Expiry label="Ubezpieczenie OC — ważne do" date={data.ocInsuranceValidUntil} today={today} />
             <Expiry label="Ubezpieczenie CAR — ważne do" date={data.carInsuranceValidUntil} today={today} />
             <Item label="Zabezpieczenie należytego wykonania">{data.securityTypeLabel || 'Nie uzupełniono'}</Item>
-            {data.securityType && data.securityType !== 'NOT_ESTABLISHED' && <Item label="Pełna kwota zabezpieczenia">{amount(data.securityAmount)}</Item>}
-            {isDocumentSecurity(data.securityType) && <>
-                <Item label="Wariant zabezpieczenia">{data.securityValidityModeLabel || 'Nie uzupełniono'}</Item>
-                <Expiry label={data.securityValidityMode === 'TWO_STAGE' ? 'Zabezpieczenie realizacji — ważne do' : 'Całe zabezpieczenie — ważne do'} date={data.securityValidUntil} today={today} />
-                {data.securityValidityMode === 'TWO_STAGE' && <>
-                    <Item label="Zredukowana kwota na gwarancję i rękojmię">{amount(data.retentionSecurityAmount)}</Item>
-                    <Expiry label="Zredukowane zabezpieczenie — ważne do" date={data.retentionSecurityValidUntil} today={today} />
-                </>}
-            </>}
+            {stages.length > 0 && <Item label="Pełna kwota zabezpieczenia (historyczna)">{amount(data.securityAmount)}</Item>}
+            {stages.length > 0 && <Item label="Etapy zabezpieczenia">{data.securityValidityModeLabel || 'Jeden etap — całe zabezpieczenie'}</Item>}
         </div>
-        <p className="main-form-hint">Okres gwarancji i rękojmi liczymy w miesiącach kalendarzowych od faktycznego zakończenia umowy. Terminy polis i dokumentów zabezpieczenia są wprowadzane niezależnie.</p>
+        {stages.length > 0 && <div className="security-return-grid">
+            {stages.map(stage => <div key={stage.stage} className={`security-return-stage${stage.returned ? ' security-return-stage--returned' : ''}`}>
+                <div className="security-return-heading"><h3>{stage.label}</h3>
+                    <span className={`security-return-badge${stage.returned ? ' security-return-badge--done' : ''}`}>{stage.returned ? 'Zwrócono' : 'Nie oznaczono zwrotu'}</span>
+                </div>
+                <p className="security-return-amount">Kwota {stage.returned ? 'zwrócona' : 'do zwrotu'}: <strong>{stage.amountCents == null ? 'Nie uzupełniono kwoty' : formatBudgetCents(stage.amountCents)}</strong></p>
+                {!stage.returned && isDocumentSecurity(data.securityType) && <Expiry label="Dokument — ważny do" date={stage.date} today={today} />}
+                {contractId && onChange && <button type="button" className="main-form-button" disabled={saving !== null}
+                    aria-label={`${stage.returned ? 'Cofnij oznaczenie zwrotu' : 'Oznacz zwrot'}: ${stage.label}`}
+                    onClick={() => markReturn(stage)}>
+                    {saving === stage.stage ? 'Zapisywanie…' : stage.returned ? 'Cofnij oznaczenie zwrotu' : 'Oznacz jako zwrócone'}
+                </button>}
+            </div>)}
+        </div>}
+        {error && <p className="main-form-field-error" role="alert">{error}</p>}
+        {message && <p className="security-return-message" role="status">{message}</p>}
+        <p className="main-form-hint">Okres gwarancji i rękojmi liczymy w miesiącach kalendarzowych od faktycznego zakończenia umowy. Oznaczenie zwrotu zachowuje kwoty i historyczne terminy.</p>
     </section>;
 }
 function Item({ label, children }) {

@@ -34,14 +34,15 @@ export default function MainContractAdministrationFields({ value, contractDate, 
             {field('carInsuranceValidUntil', 'Ubezpieczenie CAR — ważne do', { type: 'date' })}
             {field('securityType', 'Zabezpieczenie należytego wykonania', { choices: options.securityTypes })}
             {form.securityType && form.securityType !== 'NOT_ESTABLISHED' && field('securityAmount', 'Pełna kwota zabezpieczenia (PLN)', { inputMode: 'decimal' })}
-            {document && <>
-                {field('securityValidityMode', 'Wariant ważności dokumentu', { choices: options.validityModes, required: true })}
-                {field('securityValidUntil', form.securityValidityMode === 'TWO_STAGE' ? 'Zabezpieczenie realizacji — ważne do' : 'Całe zabezpieczenie — ważne do', { type: 'date', required: true })}
+            {form.securityType && form.securityType !== 'NOT_ESTABLISHED' && <>
+                {field('securityValidityMode', 'Etapy zabezpieczenia', { choices: options.validityModes, required: document })}
+                {document && field('securityValidUntil', form.securityValidityMode === 'TWO_STAGE' ? 'Zabezpieczenie realizacji — ważne do' : 'Całe zabezpieczenie — ważne do', { type: 'date', required: true })}
                 {form.securityValidityMode === 'TWO_STAGE' && <>
                     {field('retentionSecurityAmount', 'Zredukowana kwota na gwarancję i rękojmię (PLN)', { inputMode: 'decimal' })}
-                    {field('retentionSecurityValidUntil', 'Zredukowane zabezpieczenie — ważne do', { type: 'date', required: true })}
+                    {document && field('retentionSecurityValidUntil', 'Zredukowane zabezpieczenie — ważne do', { type: 'date', required: true })}
                 </>}
             </>}
         </div>
+        <p className="main-form-hint">Zwrot całego zabezpieczenia lub jego części oznaczysz w szczegółach umowy. Dla dwóch etapów kwota pierwszego zwrotu to pełna kwota pomniejszona o część pozostawioną na gwarancję i rękojmię.</p>
     </fieldset>;
 }

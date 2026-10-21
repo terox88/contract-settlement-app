@@ -2,6 +2,7 @@ package pl.company.settlements.contract.service;
 
 import pl.company.settlements.contract.domain.PerformanceSecurityType;
 import pl.company.settlements.contract.domain.SecurityValidityMode;
+import pl.company.settlements.contract.domain.SecurityReturnStage;
 import pl.company.settlements.contract.model.MainContractAdministrationRequest;
 
 import java.math.BigDecimal;
@@ -63,6 +64,35 @@ public final class MainContractAdministrationCases {
         MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), date("2026-10-20")); checks++;
         MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), date("2026-10-21")); checks++;
         MainContractAdministrationRules.validateCompletionDate(date("2026-10-20"), null); checks++;
+        var cashTwo = value(null, null, PerformanceSecurityType.CASH, SecurityValidityMode.TWO_STAGE,
+                null, null, "1000.01", "300.01");
+        valid(cashTwo);
+        reject(() -> valid(value(null, null, PerformanceSecurityType.CASH, null, null, null, "1000", "300")));
+        reject(() -> valid(value(null, null, PerformanceSecurityType.CASH, SecurityValidityMode.TWO_STAGE, null, null, "1000", "1000.01")));
+        var returned = MainContractAdministrationRules.validatedValue(cashTwo);
+        MainContractAdministrationRules.setReturned(returned, SecurityReturnStage.PERFORMANCE, true);
+        var marked = MainContractAdministrationRules.toResponse(returned);
+        yes(marked.securityReturned() && !marked.retentionSecurityReturned());
+        yes(marked.securityAmount().compareTo(new BigDecimal("1000.01")) == 0);
+        MainContractAdministrationRules.setReturned(returned, SecurityReturnStage.RETENTION, true);
+        yes(MainContractAdministrationRules.toResponse(returned).retentionSecurityReturned());
+        var replacement = MainContractAdministrationRules.validatedValue(cashTwo);
+        MainContractAdministrationRules.preserveReturns(returned, replacement);
+        yes(MainContractAdministrationRules.toResponse(replacement).securityReturned());
+        yes(MainContractAdministrationRules.toResponse(replacement).retentionSecurityReturned());
+        reject(() -> MainContractAdministrationRules.preserveReturns(returned,
+                MainContractAdministrationRules.validatedValue(value(null, null, PerformanceSecurityType.CASH, null, null, null, "1000", null))));
+        reject(() -> MainContractAdministrationRules.setReturned(null, SecurityReturnStage.PERFORMANCE, true));
+        reject(() -> MainContractAdministrationRules.setReturned(returned, null, true));
+        reject(() -> MainContractAdministrationRules.setReturned(returned, SecurityReturnStage.PERFORMANCE, null));
+        reject(() -> MainContractAdministrationRules.setReturned(MainContractAdministrationRules.validatedValue(empty), SecurityReturnStage.PERFORMANCE, true));
+        var single = MainContractAdministrationRules.validatedValue(value(null, null, PerformanceSecurityType.BANK_GUARANTEE,
+                SecurityValidityMode.SINGLE, "2026-12-31", null, "1000", null));
+        reject(() -> MainContractAdministrationRules.setReturned(single, SecurityReturnStage.RETENTION, true));
+        MainContractAdministrationRules.setReturned(single, SecurityReturnStage.PERFORMANCE, true);
+        yes(single.getSecurityValidUntil().equals(date("2026-12-31")));
+        MainContractAdministrationRules.setReturned(single, SecurityReturnStage.PERFORMANCE, false);
+        yes(!MainContractAdministrationRules.toResponse(single).securityReturned());
         return checks;
     }
     private static MainContractAdministrationRequest value(String completed, Integer months, PerformanceSecurityType type,

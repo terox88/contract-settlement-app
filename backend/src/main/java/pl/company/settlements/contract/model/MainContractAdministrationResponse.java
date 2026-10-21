@@ -18,5 +18,7 @@ public record MainContractAdministrationResponse(
         LocalDate retentionSecurityValidUntil,
         LocalDate warrantyEndDate,
         String securityTypeLabel,
-        String securityValidityModeLabel
+        String securityValidityModeLabel,
+        boolean securityReturned,
+        boolean retentionSecurityReturned
 ) {}

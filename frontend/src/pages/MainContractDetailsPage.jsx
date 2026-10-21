@@ -350,7 +350,9 @@ export default function MainContractDetailsPage() {
 
             </section>
 
-            <MainContractAdministrationCard administration={contract.administration} />
+            <MainContractAdministrationCard key={contract.id} contractId={contract.id} administration={contract.administration}
+                onChange={administration => setContract(previous => String(previous?.id) === String(contract.id)
+                    ? { ...previous, administration } : previous)} />
 
             <AttachmentDisclosure ownerType="contract" ownerId={contract.id} title="Dokumenty umowy — dodaj lub otwórz" />
 

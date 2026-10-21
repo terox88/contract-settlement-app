@@ -8,6 +8,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import pl.company.settlements.contract.domain.ContractType;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.RemunerationType;
+import pl.company.settlements.contract.domain.PerformanceSecurityType;
+import pl.company.settlements.contract.domain.SecurityReturnStage;
+import pl.company.settlements.contract.model.SecurityReturnRequest;
 import pl.company.settlements.contract.model.MainContractAdministrationRequest;
 import pl.company.settlements.contract.model.MainContractUpdateRequest;
 import pl.company.settlements.contract.model.MainContractCreateRequest;
@@ -27,6 +30,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -118,6 +123,30 @@ class MainContractAdministrationServiceTest {
 
     private void lockExisting() {
         when(repository.findByIdForUpdate(7L)).thenReturn(Optional.of(contract));
+    }
+
+    @Test
+    void marksReturnWithoutRewritingTheRestOfTheContractAndCanUndoIt() {
+        lockExisting();
+        var administration = new MainContractAdministrationRequest(null, null, null, null,
+                PerformanceSecurityType.CASH, new BigDecimal("1000"), null, null, null, null);
+        contract.setAdministration(MainContractAdministrationRules.validatedValue(administration));
+        assertTrue(service.updateSecurityReturn(7L, new SecurityReturnRequest(SecurityReturnStage.PERFORMANCE, true)).securityReturned());
+        assertEquals("OLD", contract.getContractNumber());
+        assertEquals(new BigDecimal("1000"), contract.getAdministration().getSecurityAmount());
+        assertFalse(service.updateSecurityReturn(7L, new SecurityReturnRequest(SecurityReturnStage.PERFORMANCE, false)).securityReturned());
+        verifyNoInteractions(tasks, contractors, contractorService, invoices, payments, hierarchy, limits);
+    }
+
+    @Test
+    void normalContractEditPreservesReturnMarkedInDetails() {
+        lockExisting(); enableResponse();
+        var administration = new MainContractAdministrationRequest(null, null, null, null,
+                PerformanceSecurityType.CASH, new BigDecimal("1000"), null, null, null, null);
+        contract.setAdministration(MainContractAdministrationRules.validatedValue(administration));
+        service.updateSecurityReturn(7L, new SecurityReturnRequest(SecurityReturnStage.PERFORMANCE, true));
+        MainContractUpdateRequest request = update(); request.setAdministration(administration);
+        assertTrue(service.update(7L, request).getAdministration().securityReturned());
     }
 
     private void enableResponse() {

@@ -67,6 +67,7 @@ export function validateAdministration(value, contractDate = null) {
         }
     }
     const document = isDocumentSecurity(form.securityType);
+    const established = Boolean(form.securityType && form.securityType !== 'NOT_ESTABLISHED');
     if (document) {
         if (!['SINGLE', 'TWO_STAGE'].includes(form.securityValidityMode)) error('securityValidityMode', 'Wybierz wariant ważności zabezpieczenia.');
         if (!form.securityValidUntil) error('securityValidUntil', 'Podaj termin ważności dokumentu.');
@@ -77,10 +78,12 @@ export function validateAdministration(value, contractDate = null) {
             if (full && reduced && reduced.cents > full.cents) error('retentionSecurityAmount', 'Zredukowana kwota nie może przekraczać pełnej kwoty.');
         }
     }
-    // Hidden fields must never survive a switch to cash, no security or one date.
-    if (!document && (form.securityValidityMode || form.securityValidUntil || form.retentionSecurityAmount || form.retentionSecurityValidUntil)) error('securityType', 'Usuń terminy dokumentu po zmianie formy zabezpieczenia.');
-    if ((!form.securityType || form.securityType === 'NOT_ESTABLISHED') && form.securityAmount) error('securityType', 'Kwota wymaga wskazania ustanowionego zabezpieczenia.');
-    if (document && form.securityValidityMode === 'SINGLE' && (form.retentionSecurityAmount || form.retentionSecurityValidUntil)) error('securityValidityMode', 'Drugi etap wymaga wariantu dwóch terminów.');
+    if (!document && (form.securityValidUntil || form.retentionSecurityValidUntil)) error('securityType', 'Usuń terminy dokumentu po zmianie formy zabezpieczenia.');
+    if (!established && (form.securityAmount || form.securityValidityMode || form.retentionSecurityAmount)) error('securityType', 'Dane zabezpieczenia wymagają wskazania jego ustanowionej formy.');
+    if (established && form.securityValidityMode && !['SINGLE', 'TWO_STAGE'].includes(form.securityValidityMode)) error('securityValidityMode', 'Wybierz prawidłowy wariant zabezpieczenia.');
+    if (form.securityValidityMode !== 'TWO_STAGE' && (form.retentionSecurityAmount || form.retentionSecurityValidUntil)) error('securityValidityMode', 'Drugi etap wymaga wariantu dwóch etapów.');
+    const full = parseBudgetAmount(form.securityAmount), reduced = parseBudgetAmount(form.retentionSecurityAmount);
+    if (full && reduced && reduced.cents > full.cents) error('retentionSecurityAmount', 'Zredukowana kwota nie może przekraczać pełnej kwoty.');
     return errors;
 }
 export function administrationPayload(value, contractDate = null) {
@@ -96,4 +99,17 @@ export function changeSecurityType(value, type) {
         securityValidUntil: isDocumentSecurity(type) ? value.securityValidUntil : '',
         retentionSecurityAmount: isDocumentSecurity(type) ? value.retentionSecurityAmount : '',
         retentionSecurityValidUntil: isDocumentSecurity(type) ? value.retentionSecurityValidUntil : '' };
+}
+
+export function securityStages(data) {
+    if (!data?.securityType || data.securityType === 'NOT_ESTABLISHED') return [];
+    const two = data.securityValidityMode === 'TWO_STAGE';
+    const full = parseBudgetAmount(data.securityAmount), retained = parseBudgetAmount(data.retentionSecurityAmount);
+    const performanceAmount = full && (!two || retained)
+        ? full.cents - (two ? retained.cents : 0n) : null;
+    const stages = [{ stage: 'PERFORMANCE', label: two ? 'Część na realizację' : 'Całe zabezpieczenie',
+        returned: data.securityReturned === true, date: data.securityValidUntil, amountCents: performanceAmount }];
+    if (two) stages.push({ stage: 'RETENTION', label: 'Część na gwarancję i rękojmię',
+        returned: data.retentionSecurityReturned === true, date: data.retentionSecurityValidUntil, amountCents: retained?.cents ?? null });
+    return stages;
 }
