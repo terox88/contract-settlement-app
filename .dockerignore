@@ -1,0 +1,31 @@
+# Dependencies installed inside the Linux build container.
+**/node_modules
+
+# Locally generated output and caches.
+**/build
+**/dist
+**/out
+**/.gradle
+**/.vite
+**/coverage
+**/*.class
+
+# Persistent application data and backups (project root).
+storage/
+backups/
+backup/
+logs/
+
+# Environment files and local secrets.
+**/.env
+**/.env.*
+secrets/
+
+# Version control and local IDE settings.
+**/.git
+**/.idea
+**/.vscode
+**/*.iml
+**/*.log
+**/.DS_Store
+**/Thumbs.db
