@@ -20,3 +20,9 @@ app:
   storage:
     root: ${APP_STORAGE_ROOT:./storage/documents}
 
+  bootstrap-admin:
+    enabled: ${APP_BOOTSTRAP_ADMIN_ENABLED:false}
+    username: ${APP_BOOTSTRAP_ADMIN_USERNAME:}
+    display-name: ${APP_BOOTSTRAP_ADMIN_DISPLAY_NAME:}
+    password: ${APP_BOOTSTRAP_ADMIN_PASSWORD:}
+
