@@ -172,4 +172,14 @@ public class AppUser {
 
         return value;
     }
+
+    public void changePassword(String encodedPassword) {
+        this.passwordHash = requireText(
+                encodedPassword,
+                "Hash hasła",
+                255
+        );
+        this.passwordChangeRequired = false;
+        this.securityVersion++;
+    }
 }

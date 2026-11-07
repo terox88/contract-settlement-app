@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -158,6 +162,37 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.NOT_FOUND,
                 "Requested resource was not found",
+                request.getRequestURI(),
+                null
+        );
+    }
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationFailure(
+            HttpServletRequest request
+    ) {
+        HttpSession session = request.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        SecurityContextHolder.clearContext();
+
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Sesja jest nieaktualna. Zaloguj się ponownie.",
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "Brak uprawnień do tej operacji",
                 request.getRequestURI(),
                 null
         );
