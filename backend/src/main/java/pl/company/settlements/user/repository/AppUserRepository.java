@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pl.company.settlements.user.domain.AppUser;
+import pl.company.settlements.user.model.UserRole;
 
 import java.util.Optional;
 
@@ -16,9 +17,9 @@ public interface AppUserRepository
 
     boolean existsByUsername(String username);
 
+    long countByRoleAndEnabledTrue(UserRole role);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from AppUser u where u.id = :id")
-    Optional<AppUser> findByIdForUpdate(
-            @Param("id") Long id
-    );
+    Optional<AppUser> findByIdForUpdate(@Param("id") Long id);
 }

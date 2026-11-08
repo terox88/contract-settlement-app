@@ -182,4 +182,36 @@ public class AppUser {
         this.passwordChangeRequired = false;
         this.securityVersion++;
     }
+
+    public void updateAccount(
+            String displayName,
+            UserRole role,
+            boolean enabled
+    ) {
+        if (role == null) {
+            throw new IllegalArgumentException("Rola jest wymagana");
+        }
+
+        String normalizedDisplayName =
+                requireText(displayName, "Nazwa użytkownika", 150).strip();
+
+        boolean changed =
+                !this.displayName.equals(normalizedDisplayName)
+                        || this.role != role
+                        || this.enabled != enabled;
+
+        if (changed) {
+            this.displayName = normalizedDisplayName;
+            this.role = role;
+            this.enabled = enabled;
+            this.securityVersion++;
+        }
+    }
+
+    public void resetPassword(String encodedPassword) {
+        this.passwordHash =
+                requireText(encodedPassword, "Hash hasła", 255);
+        this.passwordChangeRequired = true;
+        this.securityVersion++;
+    }
 }
