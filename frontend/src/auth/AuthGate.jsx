@@ -19,6 +19,7 @@ export default function AuthGate({ children }) {
         error,
         retry,
         canEdit,
+        isAdmin,
     } = useAuth();
 
     const location = useLocation();
@@ -89,9 +90,22 @@ export default function AuthGate({ children }) {
 
     if (path === '/change-password') {
         content = (
-            <ChangePasswordPage
-                forced={user.passwordChangeRequired}
-            />
+            <ChangePasswordPage forced={user.passwordChangeRequired} />
+        );
+    } else if (
+        (path === '/users' || path.startsWith('/users/'))
+        && !isAdmin
+    ) {
+        content = (
+            <main className="auth-screen auth-screen--inside">
+                <section className="auth-card">
+                    <h1>Brak uprawnień</h1>
+                    <p>
+                        Panel użytkowników jest dostępny dla administratora.
+                    </p>
+                    <Link to="/tasks">Przejdź do zadań</Link>
+                </section>
+            </main>
         );
     } else if (!canEdit && /\/(new|edit)$/.test(path)) {
         content = (
@@ -117,7 +131,7 @@ export default function AuthGate({ children }) {
 }
 
 function UserToolbar() {
-    const { user, logout, busy } = useAuth();
+    const { user, logout, busy, isAdmin } = useAuth();
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -145,6 +159,10 @@ function UserToolbar() {
             <div className="auth-toolbar__identity">
                 {!user.passwordChangeRequired && (
                     <Link to="/tasks">Zadania</Link>
+                )}
+
+                {isAdmin && !user.passwordChangeRequired && (
+                    <Link to="/users">Użytkownicy</Link>
                 )}
 
                 <span>{user.displayName || user.username}</span>

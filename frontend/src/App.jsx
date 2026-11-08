@@ -24,6 +24,7 @@ const MainContractorInvoiceFormPage = lazy(() => import('./pages/MainContractorI
 const MainInvoiceSettlementPage = lazy(() => import('./pages/MainInvoiceSettlementPage'));
 const SubcontractorInvoicesPage = lazy(() => import('./pages/SubcontractorInvoicesPage'));
 const SubcontractorInvoiceFormPage = lazy(() => import('./pages/SubcontractorInvoiceFormPage'));
+const UsersPage = lazy(() => import('./pages/UsersPage'));
 
 export default function App() {
     const location = useLocation();
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId/amendments/new" element={<ContractAmendmentFormPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId/amendments/:amendmentId/edit" element={<ContractAmendmentFormPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId/invoices/:invoiceId/settlements" element={<MainInvoiceSettlementPage />} />
+
 
             <Route
                 path="/"
@@ -150,13 +152,17 @@ export default function App() {
             <Route path="/main-contracts/:contractId/invoices/new" element={<MainContractorInvoiceFormPage />} />
             <Route path="/main-contracts/:contractId/invoices/:mainInvoiceId" element={<MainInvoiceSettlementPage />} />
             <Route path="/main-contracts/:contractId/invoices/:mainInvoiceId/edit" element={<MainContractorInvoiceFormPage />} />
+                            <Route path="/users" element={<UsersPage />} />
 
             <Route
                 path="/main-contracts/:contractId"
                 element={
                     <MainContractDetailsPage />
                 }
+
+
             />
+
 
                         </Routes>
                     </Suspense>

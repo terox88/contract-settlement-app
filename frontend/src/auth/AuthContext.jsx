@@ -175,6 +175,14 @@ export function AuthProvider({ children }) {
         [begin, end]
     );
 
+    const finishSession = useCallback((message) => {
+        resetAuthTransport();
+        setUser(null);
+        setError('');
+        setNotice(message);
+        setStatus('ready');
+    }, []);
+
     const retry = useCallback(
         () => setAttempt((previous) => previous + 1),
         []
@@ -189,6 +197,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         changePassword,
+        finishSession,
         retry,
         canEdit: user?.role === 'EDITOR' || user?.role === 'ADMIN',
         isAdmin: user?.role === 'ADMIN',
@@ -201,6 +210,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         changePassword,
+        finishSession,
         retry,
     ]);
 
