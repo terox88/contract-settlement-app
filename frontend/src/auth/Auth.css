@@ -1,0 +1,142 @@
+.auth-screen {
+    box-sizing: border-box;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #f3f5f8;
+    color: #172033;
+}
+
+.auth-screen--inside {
+    min-height: calc(100vh - 90px);
+}
+
+.auth-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 460px;
+    padding: 28px;
+    background: #fff;
+    border: 1px solid #dce2eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px #1720330a;
+}
+
+.auth-card h1 {
+    margin: 0 0 12px;
+    font-size: 1.6rem;
+}
+
+.auth-card p {
+    line-height: 1.5;
+}
+
+.auth-field {
+    display: grid;
+    gap: 7px;
+    margin: 18px 0;
+    font-weight: 600;
+}
+
+.auth-field input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #bac4d2;
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 400;
+    background: #fff;
+    color: #172033;
+}
+
+.auth-field input:focus-visible,
+.auth-button:focus-visible {
+    outline: 3px solid #93b8f2;
+    outline-offset: 2px;
+}
+
+.auth-button {
+    padding: 10px 15px;
+    border: 1px solid #bac4d2;
+    border-radius: 6px;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+    cursor: pointer;
+}
+
+.auth-button--primary {
+    background: #245bb2;
+    border-color: #245bb2;
+    color: #fff;
+}
+
+.auth-button:disabled,
+.auth-field input:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.auth-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.auth-error,
+.auth-notice {
+    padding: 11px 13px;
+    border-radius: 6px;
+}
+
+.auth-error {
+    background: #fff0f0;
+    color: #9a2525;
+}
+
+.auth-notice {
+    background: #edf4ff;
+    color: #214e8f;
+}
+
+.auth-toolbar {
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 24px;
+    background: #fff;
+    color: #172033;
+    border-bottom: 1px solid #dce2eb;
+}
+
+.auth-toolbar__identity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.auth-toolbar__identity small {
+    color: #56647a;
+}
+
+.auth-toolbar__error {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .auth-card {
+        padding: 20px;
+    }
+
+    .auth-toolbar {
+        padding: 12px;
+    }
+}

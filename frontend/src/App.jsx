@@ -4,6 +4,8 @@ import InvestmentTaskListPage from './pages/InvestmentTaskListPage';
 import ViewErrorBoundary from './ViewErrorBoundary';
 import './pages/InvestmentTaskFormPage.css';
 import './pages/MainContractFormPage.css';
+import { AuthProvider } from './auth/AuthContext';
+import AuthGate from './auth/AuthGate';
 
 const InvestmentTaskDetailsPage = lazy(() => import('./pages/InvestmentTaskDetailsPage'));
 const InvestmentTaskFormPage = lazy(() => import('./pages/InvestmentTaskFormPage'));
@@ -26,9 +28,17 @@ const SubcontractorInvoiceFormPage = lazy(() => import('./pages/SubcontractorInv
 export default function App() {
     const location = useLocation();
     return (
-        <ViewErrorBoundary key={location.pathname}>
-            <Suspense fallback={<div className="loading-message" role="status">Ładowanie widoku…</div>}>
-        <Routes>
+        <AuthProvider>
+            <AuthGate>
+                <ViewErrorBoundary key={location.pathname}>
+                    <Suspense
+                        fallback={
+                            <div className="loading-message" role="status">
+                                Ładowanie widoku…
+                            </div>
+                        }
+                    >
+                        <Routes>
             <Route path="/main-contracts/:contractId/attachments" element={<ContractAttachmentsPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:subcontractId" element={<SubcontractDetailsPage />} />
             <Route path="/main-contracts/:contractId/subcontracts/:parentSubcontractId/children/new" element={<SubcontractFormPage />} />
@@ -148,8 +158,10 @@ export default function App() {
                 }
             />
 
-        </Routes>
-            </Suspense>
-        </ViewErrorBoundary>
+                        </Routes>
+                    </Suspense>
+                </ViewErrorBoundary>
+            </AuthGate>
+        </AuthProvider>
     );
 }

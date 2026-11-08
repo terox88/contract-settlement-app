@@ -44,7 +44,9 @@ public class SpaWebMvcConfig implements WebMvcConfigurer {
             "/payments",
             "/payments/new",
             "/payments/{paymentId:[^.]+}",
-            "/payments/{paymentId:[^.]+}/edit"
+            "/payments/{paymentId:[^.]+}/edit",
+            "/login",
+            "/change-password",
     };
 
     @Override
