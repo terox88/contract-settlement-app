@@ -17,7 +17,8 @@ import static org.mockito.Mockito.when;
 
 class AttachmentMetadataServiceTest {
     private final DocumentAttachmentRepository repository=mock(DocumentAttachmentRepository.class);
-    private final AttachmentMetadataService service=new AttachmentMetadataService(repository);
+    private final AttachmentAuditService auditService=mock(AttachmentAuditService.class);
+    private final AttachmentMetadataService service=new AttachmentMetadataService(repository,auditService);
     private DocumentAttachment attachment() {
         StoredFile stored=new StoredFile("scan.pdf","key","application/pdf",10L,LocalDateTime.now());
         DocumentAttachment attachment=new DocumentAttachment(stored,AttachmentType.PAYMENT_CONFIRMATION);attachment.setId(1L);

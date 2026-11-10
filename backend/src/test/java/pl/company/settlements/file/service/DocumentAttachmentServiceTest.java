@@ -46,6 +46,7 @@ class DocumentAttachmentServiceTest {
     @Mock private SubcontractorStatementRepository subcontractorStatementRepository;
     @Mock private PdfPageSelectionService pdfPageSelectionService;
     @Mock private PdfSplitService pdfSplitService;
+    @Mock private AttachmentAuditService auditService;
     @InjectMocks private DocumentAttachmentService service;
 
     @Test

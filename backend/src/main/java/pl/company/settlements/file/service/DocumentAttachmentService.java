@@ -37,6 +37,7 @@ import java.util.function.Consumer;
 public class DocumentAttachmentService {
 
     private final DocumentAttachmentRepository repository;
+    private final AttachmentAuditService auditService;
 
     private final FileStorageService fileStorageService;
 
@@ -261,7 +262,8 @@ public class DocumentAttachmentService {
         );
 
         return saveAttachment(
-                attachment
+                attachment,
+                pages
         );
     }
 
@@ -299,7 +301,8 @@ public class DocumentAttachmentService {
         );
 
         return saveAttachment(
-                attachment
+                attachment,
+                pages
         );
     }
 
@@ -337,7 +340,8 @@ public class DocumentAttachmentService {
         );
 
         return saveAttachment(
-                attachment
+                attachment,
+                pages
         );
     }
 
@@ -375,7 +379,8 @@ public class DocumentAttachmentService {
         );
 
         return saveAttachment(
-                attachment
+                attachment,
+                pages
         );
     }
 
@@ -413,7 +418,8 @@ public class DocumentAttachmentService {
         );
 
         return saveAttachment(
-                attachment
+                attachment,
+                pages
         );
     }
 
@@ -451,7 +457,8 @@ public class DocumentAttachmentService {
         );
 
         return saveAttachment(
-                attachment
+                attachment,
+                pages
         );
     }
 
@@ -491,6 +498,8 @@ public class DocumentAttachmentService {
                 attachment
                         .getStoredFile()
                         .getStorageKey();
+
+        auditService.recordDeletion(attachment);
 
         repository.delete(
                 attachment
@@ -778,13 +787,12 @@ public class DocumentAttachmentService {
             );
         }
 
-        return repository
-                .saveAllAndFlush(
-                        attachments
-                )
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        List<DocumentAttachment> saved = repository.saveAllAndFlush(attachments);
+        for (int i = 0; i < saved.size(); i++) {
+            auditService.recordSplit(saved.get(i), file.getOriginalFilename(),
+                    splitParts.get(i).pageSelection(), i + 1, saved.size());
+        }
+        return toResponses(saved);
     }
 
     private DocumentAttachment createAttachment(
@@ -885,11 +893,14 @@ public class DocumentAttachmentService {
     }
 
     private AttachmentResponse saveAttachment(
-            DocumentAttachment attachment
+            DocumentAttachment attachment,
+            String pages
     ) {
 
         // Plik jest usuwany przez synchronizację transakcji, jeśli zapis metadanych zostanie wycofany.
-        return toResponse(repository.saveAndFlush(attachment));
+        DocumentAttachment saved = repository.saveAndFlush(attachment);
+        auditService.recordUpload(saved, pages);
+        return toResponse(saved);
     }
 
     private DocumentAttachment findEntityById(

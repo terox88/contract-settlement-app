@@ -48,7 +48,12 @@ public enum AuditOperation {
     DEDUCTION_REVIEW_REVOKED("Cofnięcie potwierdzenia rozbieżności potrąceń"),
     CONTRACT_PENALTY_CREATED("Dodanie kary umownej"),
     CONTRACT_PENALTY_UPDATED("Edycja kary umownej"),
-    CONTRACT_PENALTY_DELETED("Usunięcie kary umownej");
+    CONTRACT_PENALTY_DELETED("Usunięcie kary umownej"),
+
+    ATTACHMENT_UPLOADED("Dodanie załącznika"),
+    ATTACHMENT_CREATED_FROM_PDF("Utworzenie załącznika przez podział PDF"),
+    ATTACHMENT_RENAMED("Zmiana nazwy załącznika"),
+    ATTACHMENT_DELETED("Usunięcie załącznika");
 
     private final String label;
 
