@@ -10,12 +10,18 @@ import pl.company.settlements.budget.repository.BudgetRepository;
 import pl.company.settlements.task.domain.InvestmentTask;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
 import pl.company.settlements.payment.repository.PaymentAllocationRepository;
+import pl.company.settlements.audit.model.AuditEntityType;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.BusinessAuditService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
 import java.util.Map;
+import java.math.RoundingMode;
+import java.util.Comparator;
 
 
 @Service
@@ -28,6 +34,7 @@ public class BudgetService {
     private final PaymentAllocationRepository
             paymentAllocationRepository;
     private final BudgetCommitmentService budgetCommitmentService;
+    private final BusinessAuditService businessAuditService;
 
     public BudgetResponse getByInvestmentTaskId(Long investmentTaskId) {
         return toResponse(
@@ -68,8 +75,11 @@ public class BudgetService {
         investmentTask.setBudget(budget);
 
         Budget savedBudget = budgetRepository.save(budget);
+        recordAudit(AuditOperation.BUDGET_CREATED, savedBudget, null);
 
         return toResponse(savedBudget);
+
+
     }
 
     @Transactional
@@ -77,13 +87,14 @@ public class BudgetService {
             Long investmentTaskId,
             BudgetYearRequest request
     ) {
-        Budget budget =
-                findEntityByInvestmentTaskId(investmentTaskId);
+        Budget budget = findEntityByInvestmentTaskIdForUpdate(investmentTaskId);
+        AuditSnapshot before = auditSnapshot(budget);
 
         budget.addYear(
                 request.getYear(),
                 request.getAmount()
         );
+        recordAudit(AuditOperation.BUDGET_YEAR_ADDED, budget, before);
 
         return toResponse(budget);
     }
@@ -94,13 +105,14 @@ public class BudgetService {
             int year,
             BudgetAmountRequest request
     ) {
-        Budget budget =
-                findEntityByInvestmentTaskId(investmentTaskId);
+        Budget budget = findEntityByInvestmentTaskIdForUpdate(investmentTaskId);
+        AuditSnapshot before = auditSnapshot(budget);
 
         budget.changeAmountForYear(
                 year,
                 request.getAmount()
         );
+        recordAudit(AuditOperation.BUDGET_YEAR_AMOUNT_CHANGED, budget, before);
 
         return toResponse(budget);
     }
@@ -336,5 +348,47 @@ public class BudgetService {
                 .year(budgetYear.getYear())
                 .amount(budgetYear.getAmount())
                 .build();
+    }
+
+    private Budget findEntityByInvestmentTaskIdForUpdate(Long investmentTaskId) {
+        return budgetRepository.findByInvestmentTaskIdForUpdate(investmentTaskId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Budget for investment task with id "
+                                + investmentTaskId + " does not exist"
+                ));
+    }
+
+    private void recordAudit(
+            AuditOperation operation,
+            Budget budget,
+            AuditSnapshot before
+    ) {
+        InvestmentTask task = budget.getInvestmentTask();
+
+        businessAuditService.record(
+                operation,
+                AuditEntityType.BUDGET,
+                budget.getId(),
+                "Budżet zadania " + task.getTaskNumber(),
+                task.getId(),
+                before,
+                auditSnapshot(budget)
+        );
+    }
+
+    private AuditSnapshot auditSnapshot(Budget budget) {
+        AuditSnapshot snapshot = new AuditSnapshot();
+
+        budget.getYears().stream()
+                .sorted(Comparator.comparingInt(BudgetYear::getYear))
+                .forEach(year -> snapshot.field(
+                        "year_" + year.getYear(),
+                        "Plan na " + year.getYear(),
+                        year.getAmount()
+                                .setScale(2, RoundingMode.HALF_UP)
+                                .toPlainString()
+                ));
+
+        return snapshot;
     }
 }

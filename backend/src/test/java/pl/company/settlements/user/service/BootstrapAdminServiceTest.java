@@ -31,6 +31,8 @@ class BootstrapAdminServiceTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
+    @Mock
+    private UserAuditService userAuditService;
 
     @InjectMocks
     private BootstrapAdminService service;

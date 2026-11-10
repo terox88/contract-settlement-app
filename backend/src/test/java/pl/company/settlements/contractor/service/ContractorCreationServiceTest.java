@@ -11,6 +11,7 @@ import pl.company.settlements.common.error.ConflictException;
 import pl.company.settlements.contractor.domain.Contractor;
 import pl.company.settlements.contractor.model.ContractorCreateRequest;
 import pl.company.settlements.contractor.repository.ContractorRepository;
+import pl.company.settlements.audit.service.BusinessAuditService;
 
 import java.sql.SQLException;
 
@@ -20,8 +21,14 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ContractorCreationServiceTest {
-    @Mock private ContractorRepository repository;
-    @InjectMocks private ContractorService service;
+    @Mock
+    private ContractorRepository repository;
+
+    @Mock
+    private BusinessAuditService businessAuditService;
+
+    @InjectMocks
+    private ContractorService service;
 
     @Test
     void createsNormalizedEntityAndKeepsAddressFields() {

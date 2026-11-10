@@ -12,6 +12,7 @@ import pl.company.settlements.task.domain.InvestmentTaskStatus;
 import pl.company.settlements.task.model.InvestmentTaskCreateRequest;
 import pl.company.settlements.task.model.InvestmentTaskUpdateRequest;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
+import pl.company.settlements.audit.service.BusinessAuditService;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,9 +27,13 @@ import static org.mockito.Mockito.when;
 class InvestmentTaskImplementerTest {
     @Mock private InvestmentTaskRepository repository;
     private InvestmentTaskService service;
+    @Mock
+    private BusinessAuditService businessAuditService;
 
     @BeforeEach
-    void setUp() { service = new InvestmentTaskService(repository); }
+    void setUp() {
+        service = new InvestmentTaskService(repository, businessAuditService);
+    }
 
     @Test
     void createsTaskWithTrimmedOptionalDepartment() {
@@ -41,7 +46,7 @@ class InvestmentTaskImplementerTest {
     @Test
     void clearingDepartmentDoesNotChangeOtherTaskFields() {
         InvestmentTask task = new InvestmentTask("Z/1", "Inwestycja"); task.setId(1L); task.setImplementer("Dział Inwestycji");
-        when(repository.findById(1L)).thenReturn(Optional.of(task));
+        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(task));
         InvestmentTaskUpdateRequest request = new InvestmentTaskUpdateRequest();
         request.setTaskNumber("Z/1"); request.setName("Inwestycja"); request.setStatus(InvestmentTaskStatus.COMPLETED);
         request.setImplementer("   ");

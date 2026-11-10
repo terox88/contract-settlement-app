@@ -11,6 +11,10 @@ import pl.company.settlements.task.model.InvestmentTaskResponse;
 import pl.company.settlements.task.model.InvestmentTaskUpdateRequest;
 import pl.company.settlements.task.repository.InvestmentTaskRepository;
 import pl.company.settlements.task.repository.InvestmentTaskSpecification;
+import pl.company.settlements.audit.model.AuditEntityType;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.BusinessAuditService;
 
 import java.util.List;
 
@@ -20,6 +24,7 @@ import java.util.List;
 public class InvestmentTaskService {
 
     private final InvestmentTaskRepository repository;
+    private final BusinessAuditService businessAuditService;
 
     public InvestmentTaskResponse getById(Long id) {
         return toResponse(findEntityById(id));
@@ -95,6 +100,16 @@ public class InvestmentTaskService {
 
         InvestmentTask savedTask = repository.save(task);
 
+        businessAuditService.record(
+                AuditOperation.TASK_CREATED,
+                AuditEntityType.INVESTMENT_TASK,
+                savedTask.getId(),
+                savedTask.getTaskNumber(),
+                savedTask.getId(),
+                null,
+                auditSnapshot(savedTask)
+        );
+
         return toResponse(savedTask);
     }
 
@@ -103,7 +118,12 @@ public class InvestmentTaskService {
             Long id,
             InvestmentTaskUpdateRequest request
     ) {
-        InvestmentTask task = findEntityById(id);
+        InvestmentTask task = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Investment task with id " + id + " does not exist"
+                ));
+
+        AuditSnapshot before = auditSnapshot(task);
 
         String taskNumber = normalizeTaskNumber(request.getTaskNumber());
         String implementer = normalizeImplementer(request.getImplementer());
@@ -126,6 +146,16 @@ public class InvestmentTaskService {
         task.setImplementer(implementer);
         task.setStatus(
                 request.getStatus()
+        );
+
+        businessAuditService.record(
+                AuditOperation.TASK_UPDATED,
+                AuditEntityType.INVESTMENT_TASK,
+                task.getId(),
+                task.getTaskNumber(),
+                task.getId(),
+                before,
+                auditSnapshot(task)
         );
 
         return toResponse(task);
@@ -180,5 +210,14 @@ public class InvestmentTaskService {
                 .status(task.getStatus())
                 .statusLabel(task.getStatus().getLabel())
                 .build();
+    }
+
+    private AuditSnapshot auditSnapshot(InvestmentTask task) {
+        return new AuditSnapshot()
+                .field("taskNumber", "Numer zadania", task.getTaskNumber())
+                .field("name", "Nazwa", task.getName())
+                .field("description", "Opis", task.getDescription())
+                .field("implementer", "Realizator", task.getImplementer())
+                .field("status", "Status", task.getStatus().getLabel());
     }
 }

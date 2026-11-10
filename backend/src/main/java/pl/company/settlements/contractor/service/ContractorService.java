@@ -11,6 +11,10 @@ import pl.company.settlements.contractor.model.ContractorResponse;
 import pl.company.settlements.contractor.model.ContractorUpdateRequest;
 import pl.company.settlements.contractor.repository.ContractorRepository;
 import pl.company.settlements.common.error.ConflictException;
+import pl.company.settlements.audit.model.AuditEntityType;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.BusinessAuditService;
 
 import java.sql.SQLException;
 import java.util.Locale;
@@ -22,6 +26,7 @@ import java.util.Optional;
 public class ContractorService {
 
     private final ContractorRepository repository;
+    private final BusinessAuditService businessAuditService;
 
     public ContractorResponse getById(Long id) {
         return toResponse(findEntityById(id));
@@ -65,14 +70,28 @@ public class ContractorService {
                 request.getEmail()
         );
 
+        Contractor savedContractor;
+
         try {
-            // Flush pozwala zamienić konflikt równoczesnych zapisów NIP
-            // na 409, zanim metoda zwróci odpowiedź. Nie zatwierdza transakcji.
-            return repository.saveAndFlush(contractor);
+            savedContractor = repository.saveAndFlush(contractor);
         } catch (DataIntegrityViolationException error) {
-            if (isTaxIdConflict(error)) throw duplicateTaxId(normalizedTaxId);
+            if (isTaxIdConflict(error)) {
+                throw duplicateTaxId(normalizedTaxId);
+            }
             throw error;
         }
+
+        businessAuditService.record(
+                AuditOperation.CONTRACTOR_CREATED,
+                AuditEntityType.CONTRACTOR,
+                savedContractor.getId(),
+                savedContractor.getName(),
+                null,
+                null,
+                auditSnapshot(savedContractor)
+        );
+
+        return savedContractor;
     }
 
     private ConflictException duplicateTaxId(String taxId) {
@@ -104,7 +123,12 @@ public class ContractorService {
             Long id,
             ContractorUpdateRequest request
     ) {
-        Contractor contractor = findEntityById(id);
+        Contractor contractor = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Contractor with id " + id + " does not exist"
+                ));
+
+        AuditSnapshot before = auditSnapshot(contractor);
 
         String normalizedTaxId = normalizeTaxId(request.getTaxId());
 
@@ -129,6 +153,16 @@ public class ContractorService {
                 request.getCity(),
                 request.getCountry(),
                 request.getEmail()
+        );
+
+        businessAuditService.record(
+                AuditOperation.CONTRACTOR_UPDATED,
+                AuditEntityType.CONTRACTOR,
+                contractor.getId(),
+                contractor.getName(),
+                null,
+                before,
+                auditSnapshot(contractor)
         );
 
         return toResponse(contractor);
@@ -213,5 +247,18 @@ public class ContractorService {
                 .country(contractor.getCountry())
                 .email(contractor.getEmail())
                 .build();
+    }
+
+    private AuditSnapshot auditSnapshot(Contractor contractor) {
+        return new AuditSnapshot()
+                .field("name", "Nazwa", contractor.getName())
+                .field("taxId", "NIP", contractor.getTaxId())
+                .field("street", "Ulica", contractor.getStreet())
+                .field("buildingNumber", "Numer budynku", contractor.getBuildingNumber())
+                .field("apartmentNumber", "Numer lokalu", contractor.getApartmentNumber())
+                .field("postalCode", "Kod pocztowy", contractor.getPostalCode())
+                .field("city", "Miejscowość", contractor.getCity())
+                .field("country", "Kraj", contractor.getCountry())
+                .field("email", "E-mail", contractor.getEmail());
     }
 }

@@ -9,6 +9,7 @@ import pl.company.settlements.budget.domain.Budget;
 
 import java.util.Optional;
 
+
 public interface BudgetRepository extends JpaRepository<Budget, Long> {
 
     Optional<Budget> findByInvestmentTask_Id(Long investmentTaskId);
@@ -16,8 +17,13 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
     boolean existsByInvestmentTask_Id(Long investmentTaskId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select b from Budget b where b.investmentTask.id = :investmentTaskId")
+    @Query("""
+        select b from Budget b
+        where b.investmentTask.id = :investmentTaskId
+        """)
     Optional<Budget> findByInvestmentTaskIdForUpdate(
             @Param("investmentTaskId") Long investmentTaskId
     );
+
+
 }
