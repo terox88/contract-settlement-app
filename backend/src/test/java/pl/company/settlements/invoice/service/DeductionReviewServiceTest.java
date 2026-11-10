@@ -1,5 +1,7 @@
 package pl.company.settlements.invoice.service;
 
+import pl.company.settlements.audit.service.SettlementAuditService;
+
 import org.junit.jupiter.api.Test;
 import pl.company.settlements.contract.domain.ContractValueBasis;
 import pl.company.settlements.contract.domain.DeductionRule;
@@ -26,7 +28,7 @@ import static org.mockito.Mockito.when;
 class DeductionReviewServiceTest {
     private final SubcontractorInvoiceRepository repository = mock(SubcontractorInvoiceRepository.class);
     private final ContractHierarchyValidationService hierarchy = mock(ContractHierarchyValidationService.class);
-    private final DeductionReviewService service = new DeductionReviewService(repository,hierarchy);
+    private final DeductionReviewService service = new DeductionReviewService(repository,hierarchy,org.mockito.Mockito.mock(SettlementAuditService.class));
     private SubcontractorInvoice invoice() {
         Contractor firm = new Contractor("Firma", "1234563218");
         MainContract main = new MainContract(null,firm); main.setId(7L);

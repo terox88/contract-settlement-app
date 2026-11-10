@@ -2,6 +2,9 @@ package pl.company.settlements.invoice.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.contract.service.ContractHierarchyValidationService;
 import pl.company.settlements.file.domain.AttachmentType;
 import pl.company.settlements.file.domain.DocumentAttachment;
@@ -26,12 +29,16 @@ import java.util.Set;
 @Service
 @Transactional(readOnly = true)
 public class MainInvoiceReviewService {
+
+    private final SettlementAuditService auditService;
     private final MainContractorInvoiceRepository invoices;
     private final InvoiceReviewRepository repository;
     private final ContractAttachmentService documents;
     private final ContractHierarchyValidationService hierarchy;
     public MainInvoiceReviewService(MainContractorInvoiceRepository invoices, InvoiceReviewRepository repository,
-                                    ContractAttachmentService documents, ContractHierarchyValidationService hierarchy) {
+                                    ContractAttachmentService documents, ContractHierarchyValidationService hierarchy,
+                                    SettlementAuditService auditService) {
+        this.auditService = auditService;
         this.invoices = invoices; this.repository = repository; this.documents = documents; this.hierarchy = hierarchy;
     }
     private record Context(Map<Long, SubcontractorInvoice> subs, List<MainInvoiceSettlement> assignments,
@@ -59,13 +66,18 @@ public class MainInvoiceReviewService {
         if (documentsNotRequired && (reason == null || reason.isBlank() || reason.strip().length() > 1000)) {
             throw new IllegalArgumentException("Podaj uzasadnienie niewymagania dokumentów, do 1000 znaków.");
         }
+        AuditSnapshot before = auditService.mainReviewSnapshot(invoice);
         invoice.setReviewFingerprint(current.fingerprint()); invoice.setReviewedAt(Instant.now());
         invoice.setDocumentsExemptionReason(documentsNotRequired ? reason.strip() : null);
+        auditService.recordMainReview(AuditOperation.MAIN_INVOICE_REVIEW_COMPLETED, invoice, before);
         return describe(invoice, context);
     }
     @Transactional
     public MainInvoiceReview reopen(Long id) {
-        MainContractorInvoice invoice = lock(id); invoice.setReviewFingerprint(null); invoice.setReviewedAt(null); invoice.setDocumentsExemptionReason(null);
+        MainContractorInvoice invoice = lock(id);
+        AuditSnapshot before = auditService.mainReviewSnapshot(invoice);
+        invoice.setReviewFingerprint(null); invoice.setReviewedAt(null); invoice.setDocumentsExemptionReason(null);
+        auditService.recordMainReview(AuditOperation.MAIN_INVOICE_REVIEW_REOPENED, invoice, before);
         return describe(invoice, context(invoice.getMainContract().getId()));
     }
     private MainContractorInvoice find(Long id) { return invoices.findById(id).orElseThrow(() -> new IllegalArgumentException("Nie znaleziono faktury GW.")); }

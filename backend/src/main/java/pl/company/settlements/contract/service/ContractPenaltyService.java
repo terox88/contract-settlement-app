@@ -3,6 +3,9 @@ package pl.company.settlements.contract.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.contract.domain.Contract;
 import pl.company.settlements.contract.domain.ContractPenalty;
 import pl.company.settlements.contract.model.ContractPenaltyCreateRequest;
@@ -19,6 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ContractPenaltyService {
+
+    private final SettlementAuditService auditService;
 
     private final ContractPenaltyRepository penaltyRepository;
     private final ContractRepository contractRepository;
@@ -83,6 +88,7 @@ public class ContractPenaltyService {
         ContractPenalty savedPenalty =
                 penaltyRepository.save(penalty);
 
+        auditService.recordPenalty(AuditOperation.CONTRACT_PENALTY_CREATED, savedPenalty, null);
         return toResponse(savedPenalty);
     }
 
@@ -92,7 +98,7 @@ public class ContractPenaltyService {
             ContractPenaltyUpdateRequest request
     ) {
         ContractPenalty penalty =
-                findEntityById(id);
+                findEntityForUpdate(id);
 
         validateImposedDate(
                 penalty.getContract(),
@@ -103,6 +109,8 @@ public class ContractPenaltyService {
                 request.getAmount()
         );
 
+        AuditSnapshot before = auditService.penaltySnapshot(penalty);
+
         applyData(
                 penalty,
                 request.getImposedDate(),
@@ -110,13 +118,20 @@ public class ContractPenaltyService {
                 request.getDescription()
         );
 
+        auditService.recordPenalty(AuditOperation.CONTRACT_PENALTY_UPDATED, penalty, before);
         return toResponse(penalty);
     }
 
     @Transactional
     public void delete(Long id) {
-        ContractPenalty penalty = findEntityById(id);
+        ContractPenalty penalty = findEntityForUpdate(id);
+        auditService.recordPenaltyDeletion(penalty);
         penaltyRepository.delete(penalty);
+    }
+
+    private ContractPenalty findEntityForUpdate(Long id) {
+        return penaltyRepository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono kary umownej."));
     }
 
     private ContractPenalty findEntityById(Long id) {

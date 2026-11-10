@@ -3,6 +3,9 @@ package pl.company.settlements.invoice.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.repository.MainContractRepository;
 import pl.company.settlements.contract.service.ContractHierarchyValidationService;
@@ -23,6 +26,8 @@ import java.util.Locale;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MainContractorInvoiceService {
+
+    private final SettlementAuditService auditService;
 
     private final MainContractorInvoiceRepository repository;
     private final MainContractRepository mainContractRepository;
@@ -103,6 +108,8 @@ public class MainContractorInvoiceService {
         MainContractorInvoice savedInvoice =
                 repository.save(invoice);
 
+        auditService.recordInvoice(AuditOperation.MAIN_CONTRACTOR_INVOICE_CREATED, savedInvoice, null);
+
         return toResponse(savedInvoice);
     }
 
@@ -138,6 +145,8 @@ public class MainContractorInvoiceService {
         settlementValidationService.validateInvoice(invoice.getMainContract(), invoice.getGrossAmount(),
                 request.getGrossAmount(), request.getCurrency());
 
+        AuditSnapshot before = auditService.invoiceSnapshot(invoice);
+
         applyInvoiceData(
                 invoice,
                 invoiceNumber,
@@ -151,6 +160,8 @@ public class MainContractorInvoiceService {
                 request.getCurrency(),
                 request.getDescription()
         );
+
+        auditService.recordInvoice(AuditOperation.MAIN_CONTRACTOR_INVOICE_UPDATED, invoice, before);
 
         return toResponse(invoice);
     }

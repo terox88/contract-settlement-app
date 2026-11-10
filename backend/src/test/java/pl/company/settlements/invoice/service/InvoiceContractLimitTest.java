@@ -1,5 +1,7 @@
 package pl.company.settlements.invoice.service;
 
+import pl.company.settlements.audit.service.SettlementAuditService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,8 +50,8 @@ class InvoiceContractLimitTest {
     @BeforeEach
     void setUp() {
         var validator = new ContractSettlementValidationService(mainInvoices, subInvoices, allocations);
-        mainService = new MainContractorInvoiceService(mainInvoices, contracts, assignments, hierarchy, validator);
-        subService = new SubcontractorInvoiceService(subInvoices, hierarchy, validator, documents, allocations, assignments);
+        mainService = new MainContractorInvoiceService(org.mockito.Mockito.mock(SettlementAuditService.class), mainInvoices, contracts, assignments, hierarchy, validator);
+        subService = new SubcontractorInvoiceService(org.mockito.Mockito.mock(SettlementAuditService.class), subInvoices, hierarchy, validator, documents, allocations, assignments);
         main = new MainContract(null, null); main.setId(7L); main.setInitialValue(n("1000")); main.setContractNumber("UG/7");
         sub = new Subcontract(main, null); sub.setId(21L); sub.setInitialValue(n("300")); sub.setContractNumber("PW/21");
     }

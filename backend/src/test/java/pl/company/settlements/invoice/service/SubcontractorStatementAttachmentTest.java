@@ -1,5 +1,7 @@
 package pl.company.settlements.invoice.service;
 
+import pl.company.settlements.audit.service.SettlementAuditService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.when;
 class SubcontractorStatementAttachmentTest {
     @Mock private SubcontractorStatementRepository repository;
     @Mock private SubcontractorInvoiceRepository subcontractorInvoiceRepository;
+    @Mock private SettlementAuditService auditService;
     @InjectMocks private SubcontractorStatementService service;
 
     @Test
@@ -32,7 +35,7 @@ class SubcontractorStatementAttachmentTest {
         var invoice = new SubcontractorInvoice(null);
         var statement = new SubcontractorStatement(invoice); statement.setId(11L);
         statement.getAttachments().add(mock(DocumentAttachment.class)); invoice.setStatement(statement);
-        when(repository.findById(11L)).thenReturn(Optional.of(statement));
+        when(repository.findByIdForUpdate(11L)).thenReturn(Optional.of(statement));
         assertThrows(IllegalStateException.class, () -> service.delete(11L));
         assertSame(statement, invoice.getStatement());
         verify(repository, never()).delete(any(SubcontractorStatement.class));

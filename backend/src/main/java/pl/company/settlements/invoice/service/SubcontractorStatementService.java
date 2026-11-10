@@ -3,6 +3,9 @@ package pl.company.settlements.invoice.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
 import pl.company.settlements.invoice.domain.SubcontractorStatement;
 import pl.company.settlements.invoice.model.SubcontractorStatementCreateRequest;
@@ -18,6 +21,8 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SubcontractorStatementService {
+
+    private final SettlementAuditService auditService;
 
     private final SubcontractorStatementRepository repository;
 
@@ -103,6 +108,7 @@ public class SubcontractorStatementService {
 
 
         invoice.setStatement(savedStatement);
+        auditService.recordStatement(AuditOperation.SUBCONTRACTOR_STATEMENT_CREATED, savedStatement, null);
 
         return toResponse(savedStatement);
     }
@@ -113,12 +119,14 @@ public class SubcontractorStatementService {
             SubcontractorStatementUpdateRequest request
     ) {
         SubcontractorStatement statement =
-                findEntityById(id);
+                findEntityForUpdate(id);
 
         validateStatementDate(
                 statement.getSubcontractorInvoice(),
                 request.getStatementDate()
         );
+
+        AuditSnapshot before = auditService.statementSnapshot(statement);
 
         applyData(
                 statement,
@@ -126,13 +134,14 @@ public class SubcontractorStatementService {
                 request.getRemarks()
         );
 
+        auditService.recordStatement(AuditOperation.SUBCONTRACTOR_STATEMENT_UPDATED, statement, before);
         return toResponse(statement);
     }
 
     @Transactional
     public void delete(Long id) {
         SubcontractorStatement statement =
-                findEntityById(id);
+                findEntityForUpdate(id);
 
         if (!statement.getAttachments().isEmpty()) {
             throw new IllegalStateException("Przed usunięciem oświadczenia usuń jego załączniki.");
@@ -141,9 +150,15 @@ public class SubcontractorStatementService {
         SubcontractorInvoice invoice =
                 statement.getSubcontractorInvoice();
 
+        auditService.recordStatementDeletion(statement);
         invoice.setStatement(null);
 
         repository.delete(statement);
+    }
+
+    private SubcontractorStatement findEntityForUpdate(Long id) {
+        return repository.findByIdForUpdate(id).orElseThrow(() ->
+                new IllegalArgumentException("Nie znaleziono oświadczenia podwykonawcy."));
     }
 
     private SubcontractorStatement findEntityById(

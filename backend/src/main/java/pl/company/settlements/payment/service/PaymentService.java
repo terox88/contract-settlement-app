@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.payment.domain.Payment;
 import pl.company.settlements.payment.domain.PaymentAllocation;
 import pl.company.settlements.payment.model.PaymentAllocatedAmount;
@@ -25,6 +28,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PaymentService {
+
+    private final SettlementAuditService auditService;
 
     private final PaymentRepository paymentRepository;
 
@@ -125,6 +130,8 @@ public class PaymentService {
         Payment savedPayment =
                 paymentRepository.save(payment);
 
+        auditService.recordPayment(AuditOperation.PAYMENT_CREATED, savedPayment, null, List.of());
+
         return toResponse(
                 savedPayment,
                 BigDecimal.ZERO
@@ -169,6 +176,8 @@ public class PaymentService {
                 currency
         );
 
+        AuditSnapshot before = auditService.paymentSnapshot(payment);
+
         applyData(
                 payment,
                 request.getPaymentDate(),
@@ -177,6 +186,9 @@ public class PaymentService {
                 request.getBankReference(),
                 request.getDescription()
         );
+
+        auditService.recordPayment(AuditOperation.PAYMENT_UPDATED, payment, before,
+                paymentAllocationRepository.findAllByPayment_IdOrderByIdAsc(id));
 
         return toResponse(
                 payment,
@@ -202,6 +214,7 @@ public class PaymentService {
         if (!payment.getAttachments().isEmpty()) {
             throw new IllegalArgumentException("Przed usunięciem przelewu usuń jego załączniki.");
         }
+        auditService.recordPaymentDeletion(payment);
         paymentRepository.delete(payment);
     }
 

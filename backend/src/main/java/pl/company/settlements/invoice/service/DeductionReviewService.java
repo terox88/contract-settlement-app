@@ -2,6 +2,9 @@ package pl.company.settlements.invoice.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.contract.domain.DeductionRule;
 import pl.company.settlements.contract.service.ContractHierarchyValidationService;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
@@ -12,9 +15,13 @@ import java.time.Instant;
 
 @Service
 public class DeductionReviewService {
+
+    private final SettlementAuditService auditService;
     private final SubcontractorInvoiceRepository repository;
     private final ContractHierarchyValidationService hierarchy;
-    public DeductionReviewService(SubcontractorInvoiceRepository repository, ContractHierarchyValidationService hierarchy) {
+    public DeductionReviewService(SubcontractorInvoiceRepository repository, ContractHierarchyValidationService hierarchy,
+                                  SettlementAuditService auditService) {
+        this.auditService = auditService;
         this.repository = repository; this.hierarchy = hierarchy;
     }
     public static DeductionReview describe(SubcontractorInvoice invoice, BigDecimal paid, BigDecimal deducted, boolean hasPayments) {
@@ -36,12 +43,18 @@ public class DeductionReviewService {
         DeductionReview review = current(invoice);
         if (!review.fingerprint().equals(fingerprint)) throw new IllegalArgumentException("Kwoty lub reguły zmieniły się. Odśwież dane przed potwierdzeniem.");
         if (!"MISMATCH".equals(review.status()) && !"CONFIRMED".equals(review.status())) throw new IllegalArgumentException("Nie ma rozbieżności wymagającej potwierdzenia.");
+        AuditSnapshot before = auditService.deductionReviewSnapshot(invoice);
         invoice.setDeductionConfirmedFingerprint(review.fingerprint()); invoice.setDeductionConfirmedAt(Instant.now());
+        auditService.recordDeductionReview(AuditOperation.DEDUCTION_REVIEW_CONFIRMED, invoice, before);
         return current(invoice);
     }
     @Transactional
     public DeductionReview revoke(Long id) {
-        SubcontractorInvoice invoice = lock(id); invoice.setDeductionConfirmedFingerprint(null); invoice.setDeductionConfirmedAt(null); return current(invoice);
+        SubcontractorInvoice invoice = lock(id);
+        AuditSnapshot before = auditService.deductionReviewSnapshot(invoice);
+        invoice.setDeductionConfirmedFingerprint(null); invoice.setDeductionConfirmedAt(null);
+        auditService.recordDeductionReview(AuditOperation.DEDUCTION_REVIEW_REVOKED, invoice, before);
+        return current(invoice);
     }
     private SubcontractorInvoice lock(Long id) {
         Long root = repository.findMainContractIdById(id).orElseThrow(() -> new IllegalArgumentException("Nie znaleziono faktury."));

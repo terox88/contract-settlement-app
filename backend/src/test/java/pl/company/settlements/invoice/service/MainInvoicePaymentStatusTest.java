@@ -1,5 +1,7 @@
 package pl.company.settlements.invoice.service;
 
+import pl.company.settlements.audit.service.SettlementAuditService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +42,7 @@ class MainInvoicePaymentStatusTest {
 
     @BeforeEach
     void setUp() {
-        service = new MainContractorInvoiceService(invoices, contracts, settlements, hierarchy, limits);
+        service = new MainContractorInvoiceService(org.mockito.Mockito.mock(SettlementAuditService.class), invoices, contracts, settlements, hierarchy, limits);
     }
 
     @ParameterizedTest

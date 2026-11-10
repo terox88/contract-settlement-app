@@ -3,6 +3,9 @@ package pl.company.settlements.invoice.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.invoice.domain.MainContractorInvoice;
 import pl.company.settlements.invoice.domain.MainInvoiceSettlement;
 import pl.company.settlements.invoice.domain.SubcontractorInvoice;
@@ -24,6 +27,8 @@ import pl.company.settlements.contract.service.ContractHierarchyValidationServic
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MainInvoiceSettlementService {
+
+    private final SettlementAuditService auditService;
     private final MainInvoiceSettlementRepository repository;
     private final MainContractorInvoiceRepository mainContractorInvoiceRepository;
     private final SubcontractorInvoiceRepository subcontractorInvoiceRepository;
@@ -58,7 +63,9 @@ public class MainInvoiceSettlementService {
         MainInvoiceSettlement entity = pair.parent instanceof MainContractorInvoice main
                 ? new MainInvoiceSettlement(main, pair.child) : MainInvoiceSettlement.forSubcontractorParent((SubcontractorInvoice) pair.parent, pair.child);
         entity.setSettledAmount(request.getSettledAmount());
-        return toResponse(repository.save(entity));
+        MainInvoiceSettlement saved = repository.save(entity);
+        auditService.recordAssignment(AuditOperation.INVOICE_ASSIGNMENT_CREATED, saved, null);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -84,7 +91,9 @@ public class MainInvoiceSettlementService {
                 entity.getParentSubcontractorInvoice() == null ? null : entity.getParentSubcontractorInvoice().getId(), entity.getSubcontractorInvoice().getId());
         validatePair(pair);
         InvoiceAssignmentRules.validateAmount(pair.child.getGrossAmount(), repository.sumBySubcontractorInvoiceIdExcluding(pair.child.getId(), id), request.getSettledAmount());
+        AuditSnapshot before = auditService.assignmentSnapshot(entity);
         entity.setSettledAmount(request.getSettledAmount());
+        auditService.recordAssignment(AuditOperation.INVOICE_ASSIGNMENT_UPDATED, entity, before);
         return toResponse(entity);
     }
 
@@ -93,6 +102,7 @@ public class MainInvoiceSettlementService {
         var entity = repository.findByIdForUpdate(id).orElseThrow(this::missingAssignment);
         lockPair(entity.getMainContractorInvoice() == null ? null : entity.getMainContractorInvoice().getId(),
                 entity.getParentSubcontractorInvoice() == null ? null : entity.getParentSubcontractorInvoice().getId(), entity.getSubcontractorInvoice().getId());
+        auditService.recordAssignmentDeletion(entity);
         repository.delete(entity);
     }
 

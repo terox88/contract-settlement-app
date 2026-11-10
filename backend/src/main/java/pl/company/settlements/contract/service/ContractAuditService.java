@@ -1,6 +1,7 @@
 package pl.company.settlements.contract.service;
 
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import pl.company.settlements.audit.model.AuditEntityType;
 import pl.company.settlements.audit.model.AuditOperation;
@@ -85,7 +86,7 @@ public class ContractAuditService {
     public void recordContract(AuditOperation operation, Contract contract, AuditSnapshot before) {
         AuditEntityType entityType = contract instanceof MainContract
                 ? AuditEntityType.MAIN_CONTRACT : AuditEntityType.SUBCONTRACT;
-        record(operation, entityType, contract.getId(), contract.getContractNumber(),
+        recordRelated(operation, entityType, contract.getId(), contract.getContractNumber(),
                 contract, before, contractSnapshot(contract));
     }
 
@@ -95,7 +96,7 @@ public class ContractAuditService {
             ContractAmendment amendment,
             AuditSnapshot before
     ) {
-        record(operation, AuditEntityType.CONTRACT_AMENDMENT, amendment.getId(),
+        recordRelated(operation, AuditEntityType.CONTRACT_AMENDMENT, amendment.getId(),
                 amendment.getAmendmentNumber(), contract, before, amendmentSnapshot(amendment));
     }
 
@@ -105,12 +106,12 @@ public class ContractAuditService {
             FinancialLimit limit,
             AuditSnapshot before
     ) {
-        record(operation, AuditEntityType.FINANCIAL_LIMIT, limit.getId(),
+        recordRelated(operation, AuditEntityType.FINANCIAL_LIMIT, limit.getId(),
                 "Limity umowy " + contract.getContractNumber(),
                 contract, before, financialLimitSnapshot(limit));
     }
 
-    private void record(
+    public void recordRelated(
             AuditOperation operation,
             AuditEntityType entityType,
             Long entityId,
@@ -119,6 +120,7 @@ public class ContractAuditService {
             AuditSnapshot before,
             AuditSnapshot after
     ) {
+        contract = (Contract) Hibernate.unproxy(contract);
         MainContract main;
         Long subcontractId = null;
         if (contract instanceof MainContract mainContract) {

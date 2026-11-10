@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import pl.company.settlements.contract.domain.Subcontract;
 import pl.company.settlements.contract.service.ContractHierarchyValidationService;
 import pl.company.settlements.contract.service.ContractSettlementValidationService;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SubcontractorInvoiceService {
+
+    private final SettlementAuditService auditService;
 
     private final SubcontractorInvoiceRepository repository;
     private final ContractHierarchyValidationService hierarchyValidationService;
@@ -163,6 +168,7 @@ public class SubcontractorInvoiceService {
                 || (invoice.getStatement() != null && !invoice.getStatement().getAttachments().isEmpty())) {
             throw new IllegalStateException("Przed usunięciem faktury usuń jej załączniki i pliki oświadczenia.");
         }
+        auditService.recordInvoiceDeletion(invoice);
         repository.delete(invoice);
     }
 
@@ -198,6 +204,8 @@ public class SubcontractorInvoiceService {
         );
 
         SubcontractorInvoice savedInvoice = repository.save(invoice);
+
+        auditService.recordInvoice(AuditOperation.SUBCONTRACTOR_INVOICE_CREATED, savedInvoice, null);
 
         return toResponse(
                 savedInvoice,
@@ -241,6 +249,8 @@ public class SubcontractorInvoiceService {
         settlementValidationService.validateInvoice(invoice.getSubcontract(), invoice.getGrossAmount(),
                 request.getGrossAmount(), request.getCurrency());
 
+        AuditSnapshot before = auditService.invoiceSnapshot(invoice);
+
         applyInvoiceData(
                 invoice,
                 request.getInvoiceNumber(),
@@ -254,6 +264,8 @@ public class SubcontractorInvoiceService {
                 request.getVatRates(),
                 request.getDescription()
         );
+
+        auditService.recordInvoice(AuditOperation.SUBCONTRACTOR_INVOICE_UPDATED, invoice, before);
 
         return toResponseWithAggregates(invoice);
     }

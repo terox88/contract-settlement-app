@@ -1,5 +1,7 @@
 package pl.company.settlements.invoice.service;
 
+import pl.company.settlements.audit.service.SettlementAuditService;
+
 import pl.company.settlements.contract.domain.MainContract;
 import pl.company.settlements.contract.domain.Subcontract;
 import pl.company.settlements.contract.service.ContractHierarchyValidationService;
@@ -71,7 +73,7 @@ public final class MainInvoiceReviewCases {
             ContractHierarchyValidationService hierarchy = new ContractHierarchyValidationService(null,null,null) {
                 @Override public MainContract lockMainContract(Long id) { return contract; }
             };
-            service = new MainInvoiceReviewService(invoices,data,documents,hierarchy);
+            service = new MainInvoiceReviewService(invoices,data,documents,hierarchy,org.mockito.Mockito.mock(SettlementAuditService.class));
         }
         DocumentAttachment file(AttachmentType type) {
             StoredFile stored = new StoredFile("scan.pdf", "file-"+nextFile, "application/pdf", 10L, LocalDateTime.of(2026,10,18,10,0)); stored.setId(nextFile);

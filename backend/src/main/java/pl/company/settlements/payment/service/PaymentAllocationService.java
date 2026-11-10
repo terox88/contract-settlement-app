@@ -3,6 +3,9 @@ package pl.company.settlements.payment.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
+import pl.company.settlements.audit.service.SettlementAuditService;
 import org.springframework.transaction.annotation.Propagation;
 import pl.company.settlements.contract.service.ContractHierarchyValidationService;
 import pl.company.settlements.contract.service.ContractSettlementValidationService;
@@ -29,6 +32,8 @@ import pl.company.settlements.invoice.repository.MainContractorInvoiceRepository
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PaymentAllocationService {
+
+    private final SettlementAuditService auditService;
 
     private void validateParties(Long paymentId, Invoice invoice) {
         for (PaymentAllocation existing : repository.findAllByPayment_IdOrderByIdAsc(paymentId)) {
@@ -273,6 +278,8 @@ public class PaymentAllocationService {
         PaymentAllocation savedAllocation =
                 repository.save(allocation);
 
+        auditService.recordAllocation(AuditOperation.PAYMENT_ALLOCATION_CREATED, savedAllocation, null);
+
         return toResponse(
                 savedAllocation
         );
@@ -316,6 +323,8 @@ public class PaymentAllocationService {
                 allocation.getAllocatedAmount(), allocation.getDeductedAmount(),
                 request.getAllocatedAmount(), request.getDeductedAmount());
 
+        AuditSnapshot before = auditService.allocationSnapshot(allocation);
+
         allocation.setAllocatedAmount(
                 request.getAllocatedAmount()
         );
@@ -323,6 +332,8 @@ public class PaymentAllocationService {
         allocation.setDeductedAmount(
                 request.getDeductedAmount()
         );
+
+        auditService.recordAllocation(AuditOperation.PAYMENT_ALLOCATION_UPDATED, allocation, before);
 
         return toResponse(
                 allocation
@@ -336,6 +347,7 @@ public class PaymentAllocationService {
                 findEntityForUpdate(id);
         lockAllocationTargets(allocation);
 
+        auditService.recordAllocationDeletion(allocation);
         repository.delete(allocation);
     }
 

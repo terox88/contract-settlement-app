@@ -1,5 +1,7 @@
 package pl.company.settlements.invoice.service;
 
+import pl.company.settlements.audit.service.SettlementAuditService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -46,6 +48,7 @@ class SubcontractorInvoiceFormServiceTest {
     @Mock private PaymentAllocationRepository paymentAllocationRepository;
     @Mock private MainInvoiceSettlementRepository mainInvoiceSettlementRepository;
     @Mock private InvoiceDocumentService invoiceDocumentService;
+    @Mock private SettlementAuditService auditService;
     @InjectMocks private SubcontractorInvoiceService service;
 
     @Test
