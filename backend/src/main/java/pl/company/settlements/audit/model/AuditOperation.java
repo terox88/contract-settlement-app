@@ -14,7 +14,16 @@ public enum AuditOperation {
     BUDGET_YEAR_ADDED("Dodanie roku do budżetu"),
     BUDGET_YEAR_AMOUNT_CHANGED("Zmiana planu rocznego"),
     CONTRACTOR_CREATED("Utworzenie wykonawcy"),
-    CONTRACTOR_UPDATED("Edycja wykonawcy");
+    CONTRACTOR_UPDATED("Edycja wykonawcy"),
+    MAIN_CONTRACT_CREATED("Utworzenie umowy głównej"),
+    MAIN_CONTRACT_UPDATED("Edycja umowy głównej"),
+    SECURITY_RETURN_UPDATED("Zmiana statusu zwrotu zabezpieczenia"),
+    SUBCONTRACT_CREATED("Utworzenie umowy podwykonawczej"),
+    SUBCONTRACT_UPDATED("Edycja umowy podwykonawczej"),
+    CONTRACT_AMENDMENT_CREATED("Utworzenie aneksu"),
+    CONTRACT_AMENDMENT_UPDATED("Edycja aneksu"),
+    FINANCIAL_LIMIT_CREATED("Utworzenie limitów finansowych"),
+    FINANCIAL_LIMIT_UPDATED("Zmiana limitów finansowych");
 
     private final String label;
 

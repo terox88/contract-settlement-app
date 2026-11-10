@@ -39,6 +39,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialLimitSigningYearServiceTest {
+    @Mock private ContractAuditService contractAuditService;
     @Mock private FinancialLimitRepository financialLimitRepository;
     @Mock private MainContractRepository mainContractRepository;
     @Mock private BudgetRepository budgetRepository;

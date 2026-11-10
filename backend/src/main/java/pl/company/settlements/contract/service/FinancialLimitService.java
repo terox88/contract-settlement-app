@@ -1,6 +1,8 @@
 package pl.company.settlements.contract.service;
 
 import lombok.RequiredArgsConstructor;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,8 @@ public class FinancialLimitService {
     private final BudgetRepository budgetRepository;
     private final BudgetCommitmentService budgetCommitmentService;
     private final PaymentAllocationRepository paymentAllocationRepository;
+
+    private final ContractAuditService contractAuditService;
 
     public FinancialLimitResponse getByMainContractId(Long mainContractId) {
         return financialLimitRepository.findByMainContract_Id(mainContractId)
@@ -168,6 +172,8 @@ public class FinancialLimitService {
                 .findByMainContract_Id(mainContractId)
                 .orElse(null);
 
+        AuditSnapshot before = existing == null
+                ? null : contractAuditService.financialLimitSnapshot(existing);
         Map<Integer, BigDecimal> proposed = change.apply(existing);
         validatePlan(proposed, existing, contract, budget, initialPlan);
 
@@ -175,7 +181,11 @@ public class FinancialLimitService {
                 ? contract.getOrCreateFinancialLimit()
                 : existing;
         entity.replaceYears(proposed);
-        return toResponse(financialLimitRepository.saveAndFlush(entity));
+        FinancialLimit saved = financialLimitRepository.saveAndFlush(entity);
+        AuditOperation operation = existing == null
+                ? AuditOperation.FINANCIAL_LIMIT_CREATED : AuditOperation.FINANCIAL_LIMIT_UPDATED;
+        contractAuditService.recordFinancialLimit(operation, contract, saved, before);
+        return toResponse(saved);
     }
 
     private Map<Integer, BigDecimal> parsePlan(List<FinancialLimitYearRequest> rows) {

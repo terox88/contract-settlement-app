@@ -34,6 +34,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MainContractCreationServiceTest {
+    @Mock private ContractAuditService contractAuditService;
     @Mock private MainContractRepository repository;
     @Mock private InvestmentTaskRepository investmentTaskRepository;
     @Mock private ContractorRepository contractorRepository;

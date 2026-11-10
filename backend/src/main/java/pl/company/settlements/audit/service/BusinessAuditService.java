@@ -29,6 +29,21 @@ public class BusinessAuditService {
             AuditSnapshot before,
             AuditSnapshot after
     ) {
+        record(operation, entityType, entityId, entityLabel, taskId,
+                null, null, before, after);
+    }
+
+    public void record(
+            AuditOperation operation,
+            AuditEntityType entityType,
+            Long entityId,
+            String entityLabel,
+            Long taskId,
+            Long mainContractId,
+            Long subcontractId,
+            AuditSnapshot before,
+            AuditSnapshot after
+    ) {
         List<AuditFieldChange> changes = after.changesFrom(before);
 
         if (before != null && changes.isEmpty()) {
@@ -56,6 +71,8 @@ public class BusinessAuditService {
                 .entityId(entityId)
                 .entityLabel(entityLabel)
                 .taskId(taskId)
+                .mainContractId(mainContractId)
+                .subcontractId(subcontractId)
                 .changes(changes)
                 .build());
     }

@@ -4,5 +4,9 @@ public enum AuditEntityType {
     APP_USER,
     INVESTMENT_TASK,
     BUDGET,
-    CONTRACTOR
+    CONTRACTOR,
+    MAIN_CONTRACT,
+    SUBCONTRACT,
+    CONTRACT_AMENDMENT,
+    FINANCIAL_LIMIT
 }

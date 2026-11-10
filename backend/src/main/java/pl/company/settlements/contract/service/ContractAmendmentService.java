@@ -1,6 +1,8 @@
 package pl.company.settlements.contract.service;
 
 import lombok.RequiredArgsConstructor;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.contract.domain.Contract;
@@ -25,6 +27,8 @@ public class ContractAmendmentService {
     private final ContractAmendmentRepository amendmentRepository;
     private final ContractRepository contractRepository;
     private final ContractHierarchyValidationService hierarchyValidationService;
+
+    private final ContractAuditService contractAuditService;
 
     public ContractAmendmentResponse getById(Long id) {
         return toResponse(
@@ -97,6 +101,9 @@ public class ContractAmendmentService {
         ContractAmendment savedAmendment =
                 amendmentRepository.save(amendment);
 
+        contractAuditService.recordAmendment(
+                AuditOperation.CONTRACT_AMENDMENT_CREATED, contract, savedAmendment, null);
+
         return toResponse(savedAmendment);
     }
 
@@ -109,6 +116,7 @@ public class ContractAmendmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Contract amendment with id " + id + " does not exist"));
         Contract contract = hierarchyValidationService.lockContract(contractId);
         ContractAmendment amendment = findEntityById(id);
+        AuditSnapshot before = contractAuditService.amendmentSnapshot(amendment);
 
         validateDates(
                 contract,
@@ -142,6 +150,9 @@ public class ContractAmendmentService {
                 request.getNewEndDate(),
                 request.getDescription()
         );
+
+        contractAuditService.recordAmendment(
+                AuditOperation.CONTRACT_AMENDMENT_UPDATED, contract, amendment, before);
 
         return toResponse(amendment);
     }

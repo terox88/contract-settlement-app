@@ -1,6 +1,8 @@
 package pl.company.settlements.contract.service;
 
 import lombok.RequiredArgsConstructor;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +53,8 @@ public class SubcontractService {
 
     private final ContractorService contractorService;
     private final ContractHierarchyValidationService hierarchyValidationService;
+
+    private final ContractAuditService contractAuditService;
 
     public SubcontractResponse getById(Long id) {
         Subcontract subcontract = findEntityById(id);
@@ -215,6 +219,7 @@ public class SubcontractService {
 
         Subcontract savedSubcontract =
                 repository.save(subcontract);
+        contractAuditService.recordContract(AuditOperation.SUBCONTRACT_CREATED, savedSubcontract, null);
 
         return toResponse(
                 savedSubcontract,
@@ -230,6 +235,7 @@ public class SubcontractService {
             SubcontractUpdateRequest request
     ) {
         Subcontract subcontract = hierarchyValidationService.lockSubcontract(id);
+        AuditSnapshot before = contractAuditService.contractSnapshot(subcontract);
 
         validateDates(
                 request.getInitialStartDate(),
@@ -262,6 +268,8 @@ public class SubcontractService {
                         request.getOtherDeduction()
                 )
         );
+
+        contractAuditService.recordContract(AuditOperation.SUBCONTRACT_UPDATED, subcontract, before);
 
         BigDecimal invoicedAmount =
                 subcontractorInvoiceRepository

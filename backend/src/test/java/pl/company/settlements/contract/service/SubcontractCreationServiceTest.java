@@ -44,6 +44,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SubcontractCreationServiceTest {
 
+    @Mock private ContractAuditService contractAuditService;
     @Mock private SubcontractRepository repository;
     @Mock private MainContractRepository mainContractRepository;
     @Mock private ContractorRepository contractorRepository;

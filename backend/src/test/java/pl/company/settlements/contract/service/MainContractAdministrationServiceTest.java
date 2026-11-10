@@ -39,6 +39,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class MainContractAdministrationServiceTest {
+    @Mock private ContractAuditService contractAuditService;
     @Mock private MainContractRepository repository;
     @Mock private InvestmentTaskRepository tasks;
     @Mock private ContractorRepository contractors;
@@ -52,7 +53,7 @@ class MainContractAdministrationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MainContractService(repository, tasks, contractors, invoices, payments, contractorService, hierarchy, limits);
+        service = new MainContractService(repository, tasks, contractors, invoices, payments, contractorService, hierarchy, limits, contractAuditService);
         InvestmentTask task = new InvestmentTask("Z/1", "Inwestycja"); task.setId(1L);
         Contractor contractor = new Contractor("Wykonawca", "1234563218"); contractor.setId(2L);
         contract = new MainContract(task, contractor); contract.setId(7L);

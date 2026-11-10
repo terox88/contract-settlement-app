@@ -1,6 +1,8 @@
 package pl.company.settlements.contract.service;
 
 import lombok.RequiredArgsConstructor;
+import pl.company.settlements.audit.model.AuditOperation;
+import pl.company.settlements.audit.model.AuditSnapshot;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,8 @@ public class MainContractService {
     private final ContractorService contractorService;
     private final ContractHierarchyValidationService hierarchyValidationService;
     private final FinancialLimitService financialLimitService;
+
+    private final ContractAuditService contractAuditService;
 
     public MainContractResponse getById(
             Long id
@@ -203,6 +207,7 @@ public class MainContractService {
 
         contract.setAdministration(administration);
         MainContract savedContract = repository.save(contract);
+        contractAuditService.recordContract(AuditOperation.MAIN_CONTRACT_CREATED, savedContract, null);
 
         if (request.getFinancialLimitYears() != null) {
             // Ta sama transakcja: wykonawca, umowa i limity zatwierdzają się razem.
@@ -225,6 +230,8 @@ public class MainContractService {
     ) {
         MainContract contract = repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Main contract with id " + id + " does not exist"));
+
+        AuditSnapshot before = contractAuditService.contractSnapshot(contract);
 
         validateDates(
                 request.getInitialStartDate(),
@@ -257,6 +264,7 @@ public class MainContractService {
         );
 
         if (request.getAdministration() != null) contract.setAdministration(administration);
+        contractAuditService.recordContract(AuditOperation.MAIN_CONTRACT_UPDATED, contract, before);
 
         BigDecimal invoicedAmount =
                 mainContractorInvoiceRepository
@@ -280,7 +288,9 @@ public class MainContractService {
         if (request == null) throw new IllegalArgumentException("Podaj dane zwrotu zabezpieczenia.");
         MainContract contract = repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Main contract with id " + id + " does not exist"));
+        AuditSnapshot before = contractAuditService.contractSnapshot(contract);
         MainContractAdministrationRules.setReturned(contract.getAdministration(), request.stage(), request.returned());
+        contractAuditService.recordContract(AuditOperation.SECURITY_RETURN_UPDATED, contract, before);
         return MainContractAdministrationRules.toResponse(contract.getAdministration());
     }
 
