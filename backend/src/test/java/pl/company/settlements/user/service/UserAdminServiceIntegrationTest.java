@@ -30,6 +30,7 @@ import pl.company.settlements.user.model.UserPasswordResetRequest;
 import pl.company.settlements.user.model.UserRole;
 import pl.company.settlements.user.model.UserUpdateRequest;
 import pl.company.settlements.user.repository.AppUserRepository;
+import pl.company.settlements.audit.service.AuditWriter;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -38,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,7 +56,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import({
         UserAdminService.class,
         PasswordService.class,
-        PasswordConfig.class
+        PasswordConfig.class,
+        UserAuditService.class,
+        AuditWriter.class
 })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class UserAdminServiceIntegrationTest {

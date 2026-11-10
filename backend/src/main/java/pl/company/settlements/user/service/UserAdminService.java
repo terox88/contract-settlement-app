@@ -20,6 +20,7 @@ import pl.company.settlements.user.model.UserRole;
 import pl.company.settlements.user.model.UserRoleOption;
 import pl.company.settlements.user.model.UserUpdateRequest;
 import pl.company.settlements.user.repository.AppUserRepository;
+import pl.company.settlements.user.model.UserAuditSnapshot;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,6 +34,7 @@ public class UserAdminService {
     private final AppUserRepository appUserRepository;
     private final PasswordService passwordService;
     private final JdbcTemplate jdbcTemplate;
+    private final UserAuditService userAuditService;
 
     public List<UserAdminResponse> list(AppUserPrincipal principal) {
         requireAdmin(principal, false);
@@ -75,9 +77,10 @@ public class UserAdminService {
                 request.getRole()
         );
 
-        return UserAdminResponse.from(
-                appUserRepository.saveAndFlush(account)
-        );
+        appUserRepository.saveAndFlush(account);
+        userAuditService.created(principal, account);
+
+        return UserAdminResponse.from(account);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -109,15 +112,18 @@ public class UserAdminService {
             );
         }
 
+        UserAuditSnapshot before = UserAuditSnapshot.from(account);
+
         account.updateAccount(
                 request.displayName(),
                 request.role(),
                 request.enabled()
         );
 
-        return UserAdminResponse.from(
-                appUserRepository.saveAndFlush(account)
-        );
+        appUserRepository.saveAndFlush(account);
+        userAuditService.updated(principal, before, account);
+
+        return UserAdminResponse.from(account);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -138,13 +144,16 @@ public class UserAdminService {
         AppUser account = findForUpdate(id);
         requireCurrentVersion(account, request.getVersion());
 
+        UserAuditSnapshot before = UserAuditSnapshot.from(account);
+
         account.resetPassword(
                 passwordService.encode(request.getTemporaryPassword())
         );
 
-        return UserAdminResponse.from(
-                appUserRepository.saveAndFlush(account)
-        );
+        appUserRepository.saveAndFlush(account);
+        userAuditService.passwordReset(principal, before, account);
+
+        return UserAdminResponse.from(account);
     }
 
     private void lockAdminChanges(AppUserPrincipal principal) {

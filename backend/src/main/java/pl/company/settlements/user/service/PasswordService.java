@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.company.settlements.user.domain.AppUser;
 import pl.company.settlements.user.model.AppUserPrincipal;
+import pl.company.settlements.user.model.UserAuditSnapshot;
 import pl.company.settlements.user.repository.AppUserRepository;
 
 @Service
@@ -18,6 +19,7 @@ public class PasswordService {
 
     private final PasswordEncoder passwordEncoder;
     private final AppUserRepository appUserRepository;
+    private final UserAuditService userAuditService;
 
     public String encode(String rawPassword) {
         if (rawPassword == null || rawPassword.isBlank()) {
@@ -82,7 +84,16 @@ public class PasswordService {
             );
         }
 
+        UserAuditSnapshot before =
+                UserAuditSnapshot.from(account);
+
         account.changePassword(encode(newPassword));
         appUserRepository.saveAndFlush(account);
+
+        userAuditService.passwordChanged(
+                principal,
+                before,
+                account
+        );
     }
 }

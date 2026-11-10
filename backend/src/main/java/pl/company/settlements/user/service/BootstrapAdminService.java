@@ -16,6 +16,7 @@ public class BootstrapAdminService {
     private final AppUserRepository appUserRepository;
     private final PasswordService passwordService;
     private final JdbcTemplate jdbcTemplate;
+    private final UserAuditService userAuditService;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public boolean createFirstAdmin(
@@ -31,9 +32,8 @@ public class BootstrapAdminService {
             return false;
         }
 
-        String encodedPassword = passwordService.encode(
-                rawPassword
-        );
+        String encodedPassword =
+                passwordService.encode(rawPassword);
 
         AppUser administrator = new AppUser(
                 username,
@@ -43,6 +43,7 @@ public class BootstrapAdminService {
         );
 
         appUserRepository.saveAndFlush(administrator);
+        userAuditService.bootstrapCreated(administrator);
 
         return true;
     }
