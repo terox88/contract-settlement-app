@@ -48,6 +48,7 @@ public class SpaWebMvcConfig implements WebMvcConfigurer {
             "/login",
             "/change-password",
             "/users",
+            "/history",
     };
 
     @Override

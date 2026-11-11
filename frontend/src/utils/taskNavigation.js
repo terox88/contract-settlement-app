@@ -6,7 +6,7 @@ export const TASK_HISTORY_KEY = 'settlements.task-navigation.v1';
 export function safeNavigationUrl(value) {
     if (typeof value !== 'string' || value.length > 1200 || !value.startsWith('/') || value.startsWith('//') || /[\\\r\n\t]/.test(value)) return null;
     const [path, query = ''] = value.split('?');
-    if (!/^\/(?:tasks|main-contracts|payments)(?:\/|$)/.test(path)) return null;
+    if (!/^\/(?:tasks|main-contracts|payments|history)(?:\/|$)/.test(path)) return null;
     const params = new URLSearchParams(query); params.sort();
     return path + (params.size ? `?${params.toString()}` : '');
 }
@@ -51,6 +51,9 @@ export async function resolveTaskNavigation(http, url, signal) {
     };
     const result = (task = null) => ({ task, crumbs, url: safe ?? '/tasks', title: crumbs.slice(-Math.min(2, crumbs.length)).map((crumb) => crumb.title).join(' · '),
         remember: Boolean(task) && isRememberedView(safe) });
+    if (parts[0] === 'history') {
+        crumbs.push({ title: 'Historia zmian', url: parsed.pathname + parsed.search }); return result();
+    }
     if (parts[0] === 'tasks' && parts[1] === 'new') {
         crumbs.push({ title: 'Nowe zadanie', url: parsed.pathname }); return result();
     }

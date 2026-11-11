@@ -132,6 +132,7 @@ export default function InvestmentTaskDetailsPage() {
                     </div>
 
                     <div className="task-form-actions">
+                        <Link to={`/history?taskId=${taskId}`} className="task-form-button task-form-button-secondary">Historia zmian</Link>
                         {task.statusLabel && (
                             <span className="task-details-status">
                                 {task.statusLabel}

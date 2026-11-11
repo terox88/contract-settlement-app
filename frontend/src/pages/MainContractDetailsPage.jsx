@@ -162,6 +162,7 @@ export default function MainContractDetailsPage() {
                     </div>
 
                     <div className="main-form-contract-actions">
+                        <Link className="main-form-button" to={`/history?mainContractId=${contract.id}`}>Historia zmian</Link>
                         <span className="contract-type">
             {formatContractType(
                 contract

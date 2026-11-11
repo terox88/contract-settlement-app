@@ -165,6 +165,8 @@ function UserToolbar() {
                     <Link to="/users">Użytkownicy</Link>
                 )}
 
+                {!user.passwordChangeRequired && <Link to="/history">Historia zmian</Link>}
+
                 <span>{user.displayName || user.username}</span>
                 <small>{user.roleLabel || user.role}</small>
             </div>

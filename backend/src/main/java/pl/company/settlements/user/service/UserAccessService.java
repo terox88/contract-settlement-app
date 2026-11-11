@@ -102,6 +102,10 @@ public class UserAccessService {
         boolean administrator = role == UserRole.ADMIN;
         boolean editor = administrator || role == UserRole.EDITOR;
 
+        if (path.equals("/api/audit") || path.startsWith("/api/audit/")) {
+            return new AuthorizationDecision("GET".equals(method) || "HEAD".equals(method));
+        }
+
         if (path.equals("/api/users")
                 || path.startsWith("/api/users/")) {
             return new AuthorizationDecision(administrator);

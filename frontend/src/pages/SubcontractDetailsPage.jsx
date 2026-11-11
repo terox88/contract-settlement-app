@@ -37,7 +37,7 @@ function Details({ contractId, subcontractId }) {
         <section className="card main-form-card"><div className="invoice-heading"><div>
             <h1>{contract.subcontractorName}</h1><p>Umowa {contract.contractNumber} · NIP {contract.subcontractorTaxId}</p>
             <p>Zleceniodawca: {contract.payerContractorName} · {formatContractType(contract)}</p>
-        </div><div className="settlement-actions"><Link className="main-form-button" to={`${base}/edit`}>Edytuj umowę</Link>
+        </div><div className="settlement-actions"><Link className="main-form-button" to={`/history?mainContractId=${contractId}&subcontractId=${subcontractId}`}>Historia zmian</Link><Link className="main-form-button" to={`${base}/edit`}>Edytuj umowę</Link>
             <Link className="main-form-button main-form-button-primary" to={`${base}/invoices`}>Faktury i rozliczenia</Link></div></div>
             {contract.shortDescription && <p>{contract.shortDescription}</p>}
             <dl className="invoice-metrics">

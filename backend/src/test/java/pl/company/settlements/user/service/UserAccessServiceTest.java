@@ -49,7 +49,15 @@ class UserAccessServiceTest {
                     "EDITOR|DELETE|/api/attachments/1|false",
                     "ADMIN|DELETE|/api/attachments/1|true",
                     "READ_ONLY|GET|/api/users|false",
-                    "ADMIN|GET|/api/users|true"
+                    "ADMIN|GET|/api/users|true",
+                    "READ_ONLY|GET|/api/audit/events|true",
+                    "EDITOR|GET|/api/audit/events/1|true",
+                    "ADMIN|HEAD|/api/audit/options|true",
+                    "EDITOR|POST|/api/audit/events|false",
+                    "ADMIN|POST|/api/audit/events|false",
+                    "ADMIN|PUT|/api/audit/events/1|false",
+                    "ADMIN|PATCH|/api/audit/events/1|false",
+                    "ADMIN|DELETE|/api/audit/events/1|false"
             },
             delimiter = '|'
     )

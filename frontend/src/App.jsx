@@ -25,6 +25,7 @@ const MainInvoiceSettlementPage = lazy(() => import('./pages/MainInvoiceSettleme
 const SubcontractorInvoicesPage = lazy(() => import('./pages/SubcontractorInvoicesPage'));
 const SubcontractorInvoiceFormPage = lazy(() => import('./pages/SubcontractorInvoiceFormPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
+const AuditHistoryPage = lazy(() => import('./pages/AuditHistoryPage'));
 
 export default function App() {
     const location = useLocation();
@@ -153,6 +154,7 @@ export default function App() {
             <Route path="/main-contracts/:contractId/invoices/:mainInvoiceId" element={<MainInvoiceSettlementPage />} />
             <Route path="/main-contracts/:contractId/invoices/:mainInvoiceId/edit" element={<MainContractorInvoiceFormPage />} />
                             <Route path="/users" element={<UsersPage />} />
+                            <Route path="/history" element={<AuditHistoryPage />} />
 
             <Route
                 path="/main-contracts/:contractId"
